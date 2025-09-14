@@ -192,6 +192,15 @@ export interface OrgMember extends BaseEntity {
   permissions: Record<string, boolean>;
 }
 
+// Tipo para o membro atual da sessão
+export interface Member {
+  userId: string;
+  orgId: string;
+  role: string;
+  scopes: string[];
+  permissions: string[];
+}
+
 // ===== CRM =====
 export interface CrmLead extends BaseEntity {
   org_id: string;

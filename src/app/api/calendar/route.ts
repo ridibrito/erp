@@ -1,11 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { createClient } from '@supabase/supabase-js';
+import { supabaseAdmin } from '@/lib/supabase';
 import { getCurrentMember } from '@/lib/session';
-
-const supabase = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL!,
-  process.env.SUPABASE_SERVICE_ROLE_KEY!
-);
 
 export async function GET(request: NextRequest) {
   try {
@@ -25,7 +20,7 @@ export async function GET(request: NextRequest) {
     }
 
     // Construir query base
-    let query = supabase
+    let query = supabaseAdmin
       .from('v_calendar_events')
       .select('*')
       .eq('org_id', member.org_id)
@@ -81,7 +76,7 @@ export async function POST(request: NextRequest) {
     }
 
     // Verificar se o calendário pertence à organização
-    const { data: calendar } = await supabase
+    const { data: calendar } = await supabaseAdmin
       .from('cal_calendars')
       .select('id')
       .eq('id', calendar_id)
@@ -93,7 +88,7 @@ export async function POST(request: NextRequest) {
     }
 
     // Criar evento
-    const { data: event, error: eventError } = await supabase
+    const { data: event, error: eventError } = await supabaseAdmin
       .from('cal_events')
       .insert({
         org_id: member.org_id,
@@ -126,7 +121,7 @@ export async function POST(request: NextRequest) {
         role: attendee.role || 'required'
       }));
 
-      const { error: attendeeError } = await supabase
+      const { error: attendeeError } = await supabaseAdmin
         .from('cal_event_attendees')
         .insert(attendeeData);
 

@@ -3,6 +3,7 @@ import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { useState } from 'react';
 import { can } from '@/lib/authz';
+import { Logo } from '@/components/ui/Logo';
 import {
   LayoutDashboard, Users, CreditCard, FolderOpen, BarChart3, Settings, Plus, TrendingUp, TrendingDown, Building2, PieChart, Activity, Briefcase, FileText, Receipt
 } from 'lucide-react';
@@ -73,11 +74,10 @@ export function Sidebar({ scopes }: { scopes: string[] }) {
 
   return (
     <aside className="w-64 shrink-0 bg-[#1F2937] text-white flex flex-col h-screen">
-      <div className="flex items-center h-16 border-b border-gray-700 px-4 shrink-0">
-        <div className="flex items-center space-x-2">
-          <Building2 className="w-8 h-8 text-blue-400" />
-          <h1 className="font-semibold text-lg">Nexus ERP</h1>
-        </div>
+      <div className="flex items-center justify-center h-16 border-b border-gray-700 px-4 shrink-0">
+        <Link href="/dashboard" className="flex items-center hover:opacity-80 transition-opacity">
+          <Logo size="lg" variant="white" />
+        </Link>
       </div>
 
       {/* Quick Access Buttons */}

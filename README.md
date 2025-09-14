@@ -1,370 +1,205 @@
-# 🚀 Nexus ERP
+# 🏢 Cortus ERP
 
-**Sistema ERP completo para gestão empresarial**
+Sistema ERP completo para gestão empresarial com foco em empresas brasileiras.
 
-[![Next.js](https://img.shields.io/badge/Next.js-14-black?style=for-the-badge&logo=next.js)](https://nextjs.org/)
-[![TypeScript](https://img.shields.io/badge/TypeScript-5-blue?style=for-the-badge&logo=typescript)](https://www.typescriptlang.org/)
-[![Tailwind CSS](https://img.shields.io/badge/Tailwind_CSS-3-38B2AC?style=for-the-badge&logo=tailwind-css)](https://tailwindcss.com/)
-[![License](https://img.shields.io/badge/License-MIT-green.svg?style=for-the-badge)](LICENSE)
+## ✨ Características Principais
 
-## 📋 Índice
+### 🏗️ **Arquitetura Moderna**
+- **Next.js 15** com App Router para performance otimizada
+- **TypeScript** para tipagem estática e melhor DX
+- **Supabase** como backend completo (banco + auth + realtime)
+- **Tailwind CSS** para design system consistente
+- **Multi-tenancy** com isolamento de dados por empresa
 
-- [Sobre o Projeto](#-sobre-o-projeto)
-- [Funcionalidades](#-funcionalidades)
-- [Tecnologias](#-tecnologias)
-- [Estrutura do Projeto](#-estrutura-do-projeto)
-- [Instalação](#-instalação)
-- [Configuração](#-configuração)
-- [Desenvolvimento](#-desenvolvimento)
-- [Deploy](#-deploy)
-- [API](#-api)
-- [Contribuição](#-contribuição)
-- [Licença](#-licença)
+### 🛡️ **Sistema de Segurança Robusto**
+- **RBAC granular** com permissões por módulo/ação/recurso
+- **Autenticação empresarial** com validação de CNPJ
+- **Consulta à Receita Federal** para validação de empresas
+- **Auditoria completa** de ações dos usuários
+- **LGPD compliance** com gestão de consentimentos
 
-## 🎯 Sobre o Projeto
+### 🏢 **Foco Empresarial**
+- **Validação de CNPJ** com consulta em tempo real
+- **Cadastro empresarial** com dados da Receita Federal
+- **Multi-tenancy** por empresa
+- **Gestão de usuários** por organização
+- **Relatórios empresariais** personalizados
 
-O **Nexus ERP** é um sistema completo de gestão empresarial desenvolvido com tecnologias modernas, oferecendo uma solução robusta e escalável para empresas de todos os portes.
+## 🚀 **Como Usar**
 
-### ✨ Características Principais
-
-- **Interface Moderna**: Design responsivo e intuitivo
-- **Módulos Integrados**: CRM, Financeiro, Projetos, Relatórios
-- **Sistema de Permissões**: Controle granular de acesso
-- **Integrações**: Conectividade com serviços externos
-- **Escalabilidade**: Arquitetura preparada para crescimento
-- **Performance**: Otimizado para alta performance
-
-## 🚀 Funcionalidades
-
-### 📊 Dashboard
-- Visão geral dos principais indicadores
-- Gráficos e métricas em tempo real
-- Acesso rápido às funcionalidades
-
-### 👥 CRM (Customer Relationship Management)
-- **Leads**: Gestão de prospects e oportunidades
-- **Clientes**: Cadastro e histórico completo
-- **Negócios**: Pipeline de vendas e acompanhamento
-- **Atividades**: Log de interações e tarefas
-- **Propostas**: Criação e gestão de propostas comerciais
-
-### 💰 Financeiro
-- **Contas a Receber**: Gestão de faturas e recebimentos
-- **Contas a Pagar**: Controle de despesas e fornecedores
-- **Movimentações**: Registro de transações bancárias
-- **Relatórios**: DRE, fluxo de caixa e análises
-- **Centro de Custos**: Controle de custos por departamento
-
-### 📋 Projetos
-- **Gestão de Projetos**: Planejamento e execução
-- **Tarefas**: Controle de atividades e prazos
-- **Timesheet**: Registro de horas trabalhadas
-- **Contratos**: Gestão de contratos e serviços
-
-### 📈 Relatórios
-- **DRE**: Demonstrativo de Resultados
-- **Análises**: Relatórios customizáveis
-- **Exportação**: Dados em múltiplos formatos
-
-### ⚙️ Configurações
-- **Usuários**: Gestão de usuários e permissões
-- **Integrações**: Configuração de serviços externos
-- **Empresa**: Dados da organização
-- **Sistema**: Configurações gerais
-
-## 🛠 Tecnologias
-
-### Frontend
-- **[Next.js 14](https://nextjs.org/)**: Framework React com App Router
-- **[TypeScript](https://www.typescriptlang.org/)**: Tipagem estática
-- **[Tailwind CSS](https://tailwindcss.com/)**: Framework CSS utilitário
-- **[Lucide React](https://lucide.dev/)**: Biblioteca de ícones
-- **[React Hook Form](https://react-hook-form.com/)**: Gerenciamento de formulários
-
-### Backend (Planejado)
-- **[Node.js](https://nodejs.org/)**: Runtime JavaScript
-- **[Express.js](https://expressjs.com/)**: Framework web
-- **[PostgreSQL](https://www.postgresql.org/)**: Banco de dados
-- **[Prisma](https://www.prisma.io/)**: ORM
-- **[JWT](https://jwt.io/)**: Autenticação
-
-### Infraestrutura
-- **[Docker](https://www.docker.com/)**: Containerização
-- **[AWS](https://aws.amazon.com/)**: Cloud computing
-- **[Vercel](https://vercel.com/)**: Deploy e hosting
-
-## 📁 Estrutura do Projeto
-
+### 1. **Acesso à Aplicação**
 ```
-nexus/
-├── src/
-│   ├── app/                    # App Router (Next.js 14)
-│   │   ├── dashboard/         # Dashboard principal
-│   │   ├── crm/              # Módulo CRM
-│   │   ├── financeiro/       # Módulo Financeiro
-│   │   ├── projetos/         # Módulo Projetos
-│   │   ├── relatorios/       # Módulo Relatórios
-│   │   ├── settings/         # Configurações
-│   │   ├── perfil/           # Perfil do usuário
-│   │   └── layout.tsx        # Layout principal
-│   ├── components/           # Componentes React
-│   │   ├── layout/          # Componentes de layout
-│   │   ├── ui/              # Componentes de interface
-│   │   └── settings/        # Componentes de configuração
-│   ├── lib/                 # Utilitários e configurações
-│   │   ├── authz.ts         # Autorização
-│   │   ├── session.ts       # Gestão de sessão
-│   │   ├── utils.ts         # Funções utilitárias
-│   │   ├── constants.ts     # Constantes do sistema
-│   │   └── config.ts        # Configurações
-│   ├── types/               # Definições TypeScript
-│   │   └── database.ts      # Tipos do banco de dados
-│   └── hooks/               # Hooks personalizados
-│       └── useApi.ts        # Hook para APIs
-├── public/                  # Arquivos estáticos
-├── scripts/                 # Scripts de automação
-└── docs/                    # Documentação
+URL: http://localhost:3000
 ```
 
-## 🚀 Instalação
+### 2. **Usuários de Teste Disponíveis**
 
-### Pré-requisitos
+#### 🏢 **Conta Empresarial (Admin)**
+- **Email:** `admin@techsolutions.com`
+- **Senha:** `TechSolutions2024!`
+- **Empresa:** Tech Solutions LTDA
+- **CNPJ:** 11.222.333/0001-81
+- **Permissões:** Administrador completo
 
-- [Node.js](https://nodejs.org/) 18+ 
-- [npm](https://www.npmjs.com/) ou [yarn](https://yarnpkg.com/)
-- [Git](https://git-scm.com/)
+#### 👤 **Conta de Usuário (Manager)**
+- **Email:** `joao@techsolutions.com`
+- **Senha:** `JoaoSilva2024!`
+- **Nome:** João Silva
+- **Empresa:** Tech Solutions LTDA
+- **Permissões:** Gestor de projetos e CRM
 
-### Passos
+### 3. **Cadastro de Nova Empresa**
 
-1. **Clone o repositório**
-   ```bash
-   git clone https://github.com/seu-usuario/nexus-erp.git
-   cd nexus-erp
-   ```
+1. Acesse `/register`
+2. Preencha os **dados pessoais**
+3. Digite o **CNPJ da empresa**
+4. Clique em **"Validar CNPJ"** para consultar a Receita Federal
+5. Confirme os **dados da empresa** (preenchidos automaticamente)
+6. Crie sua **senha de acesso**
+7. Clique em **"Criar conta empresarial"**
 
-2. **Instale as dependências**
-   ```bash
-   npm install
-   # ou
-   yarn install
-   ```
+## 🏗️ **Estrutura do Projeto**
 
-3. **Configure as variáveis de ambiente**
-   ```bash
-   cp .env.example .env.local
-   ```
+```
+src/
+├── app/                    # Páginas da aplicação
+│   ├── login/             # Página de login
+│   ├── register/          # Página de cadastro empresarial
+│   ├── dashboard/         # Dashboard principal
+│   └── layout.tsx         # Layout global
+├── components/            # Componentes reutilizáveis
+│   ├── ui/               # Componentes de interface
+│   └── layout/           # Componentes de layout
+├── contexts/             # Contextos React
+│   └── AuthContext.tsx   # Contexto de autenticação
+├── lib/                  # Utilitários e configurações
+│   ├── auth.ts          # Sistema de autenticação
+│   ├── authz.ts         # Sistema de permissões
+│   ├── config.ts        # Configurações da aplicação
+│   ├── supabase.ts      # Cliente Supabase
+│   └── cnpj-validator.ts # Validador de CNPJ
+└── scripts/             # Scripts de configuração
+    ├── create-enterprise-user.js
+    └── create-test-user.js
+```
 
-4. **Execute o projeto**
-   ```bash
-   npm run dev
-   # ou
-   yarn dev
-   ```
+## 🔧 **Configuração do Ambiente**
 
-5. **Acesse o sistema**
-   ```
-   http://localhost:3000
-   ```
-
-## ⚙️ Configuração
-
-### Variáveis de Ambiente
-
-Crie um arquivo `.env.local` na raiz do projeto:
+### 1. **Variáveis de Ambiente**
+Crie um arquivo `.env.local` com:
 
 ```env
-# Aplicação
-NEXT_PUBLIC_APP_NAME=Nexus ERP
-NEXT_PUBLIC_APP_VERSION=1.0.0
-
-# API
-NEXT_PUBLIC_API_URL=http://localhost:3001/api
-
-# Banco de Dados
-DATABASE_URL=postgresql://user:password@localhost:5432/nexus
-
-# Autenticação
-NEXUS_DEV_ROLE=admin
-JWT_SECRET=your-secret-key
-
-# Integrações
-STRIPE_PUBLISHABLE_KEY=pk_test_...
-STRIPE_SECRET_KEY=sk_test_...
-GOOGLE_CLIENT_ID=your-google-client-id
-GOOGLE_CLIENT_SECRET=your-google-client-secret
-
-# Email
-SENDGRID_API_KEY=your-sendgrid-key
-SMTP_HOST=smtp.gmail.com
-SMTP_PORT=587
-SMTP_USER=your-email@gmail.com
-SMTP_PASS=your-password
-
-# Storage
-S3_BUCKET=nexus-uploads
-S3_REGION=us-east-1
-S3_ACCESS_KEY_ID=your-access-key
-S3_SECRET_ACCESS_KEY=your-secret-key
-
-# Monitoramento
-SENTRY_DSN=your-sentry-dsn
-GA_TRACKING_ID=your-ga-id
+NEXT_PUBLIC_SUPABASE_URL=https://pnfpcytrpuvhjzrmtbwy.supabase.co
+NEXT_PUBLIC_SUPABASE_ANON_KEY=sua_chave_anonima_aqui
+SUPABASE_SERVICE_ROLE_KEY=sua_chave_service_role_aqui
+NODE_ENV=development
+CORTUS_DEV_ROLE=admin
+CORTUS_DEV_USER_ID=dev-user
+CORTUS_DEV_ORG_ID=dev-org
 ```
 
-### Configurações por Ambiente
-
-O sistema suporta diferentes configurações para:
-
-- **Development**: Configurações para desenvolvimento local
-- **Staging**: Configurações para ambiente de testes
-- **Production**: Configurações para produção
-
-## 🛠 Desenvolvimento
-
-### Scripts Disponíveis
-
+### 2. **Instalação de Dependências**
 ```bash
-# Desenvolvimento
-npm run dev          # Inicia servidor de desenvolvimento
-npm run build        # Build para produção
-npm run start        # Inicia servidor de produção
-npm run lint         # Executa ESLint
-npm run type-check   # Verifica tipos TypeScript
-
-# Scaffolding
-npm run scaffold     # Gera estrutura inicial do sistema
+npm install
 ```
 
-### Padrões de Código
-
-- **TypeScript**: Uso obrigatório para tipagem
-- **ESLint**: Linting de código
-- **Prettier**: Formatação automática
-- **Conventional Commits**: Padrão de commits
-
-### Estrutura de Commits
-
-```
-feat: adiciona nova funcionalidade
-fix: corrige bug
-docs: atualiza documentação
-style: formatação de código
-refactor: refatoração
-test: adiciona testes
-chore: tarefas de manutenção
-```
-
-## 🚀 Deploy
-
-### Vercel (Recomendado)
-
-1. **Conecte seu repositório**
-   ```bash
-   vercel --prod
-   ```
-
-2. **Configure as variáveis de ambiente**
-   - Acesse o dashboard do Vercel
-   - Configure as variáveis em Settings > Environment Variables
-
-### Docker
-
-1. **Build da imagem**
-   ```bash
-   docker build -t nexus-erp .
-   ```
-
-2. **Execute o container**
-   ```bash
-   docker run -p 3000:3000 nexus-erp
-   ```
-
-### AWS
-
-1. **Deploy no ECS**
-   ```bash
-   aws ecs create-service --cluster nexus --service-name nexus-erp
-   ```
-
-2. **Configure o Load Balancer**
-   ```bash
-   aws elbv2 create-target-group --name nexus-tg --protocol HTTP --port 3000
-   ```
-
-## 📡 API
-
-### Endpoints Principais
-
-```
-GET    /api/dashboard          # Dados do dashboard
-GET    /api/crm/leads          # Lista de leads
-POST   /api/crm/leads          # Criar lead
-GET    /api/financeiro/invoices # Lista de faturas
-POST   /api/financeiro/invoices # Criar fatura
-GET    /api/projetos           # Lista de projetos
-POST   /api/projetos           # Criar projeto
-```
-
-### Autenticação
-
+### 3. **Executar em Desenvolvimento**
 ```bash
-# Login
-POST /api/auth/login
-{
-  "email": "user@example.com",
-  "password": "password"
-}
-
-# Response
-{
-  "token": "jwt-token",
-  "user": {
-    "id": "user-id",
-    "name": "User Name",
-    "role": "admin"
-  }
-}
+npm run dev
 ```
 
-### Headers Necessários
+## 🏢 **Módulos Disponíveis**
 
-```bash
-Authorization: Bearer <token>
-Content-Type: application/json
-```
+### 📊 **Dashboard**
+- Visão geral da empresa
+- Métricas principais
+- Acesso rápido aos módulos
 
-## 🤝 Contribuição
+### 👥 **CRM**
+- Gestão de leads
+- Contas de clientes
+- Oportunidades de negócio
+- Pipeline de vendas
 
-1. **Fork o projeto**
-2. **Crie uma branch** (`git checkout -b feature/AmazingFeature`)
-3. **Commit suas mudanças** (`git commit -m 'Add some AmazingFeature'`)
-4. **Push para a branch** (`git push origin feature/AmazingFeature`)
-5. **Abra um Pull Request**
+### 💰 **Financeiro**
+- Contas a pagar/receber
+- Faturas e notas fiscais
+- Relatórios financeiros
+- Controle de fluxo de caixa
 
-### Diretrizes de Contribuição
+### 📋 **Projetos**
+- Gestão de projetos
+- Controle de tarefas
+- Times e recursos
+- Cronogramas
 
-- Siga os padrões de código estabelecidos
-- Adicione testes para novas funcionalidades
-- Atualize a documentação quando necessário
-- Mantenha commits pequenos e focados
+### 📊 **Relatórios**
+- Relatórios personalizados
+- Dashboards executivos
+- Análises de performance
+- Exportação de dados
 
-## 📄 Licença
+### ⚙️ **Configurações**
+- Gestão de usuários
+- Configurações da empresa
+- Permissões e papéis
+- Integrações
 
-Este projeto está licenciado sob a Licença MIT - veja o arquivo [LICENSE](LICENSE) para detalhes.
+## 🛡️ **Sistema de Permissões**
 
-## 📞 Suporte
+### **Papéis Disponíveis**
+- **Admin:** Acesso completo ao sistema
+- **Manager:** Gestão de projetos e CRM
+- **User:** Acesso básico aos módulos
+- **Viewer:** Apenas visualização
 
-- **Email**: suporte@nexus.com
-- **Documentação**: [docs.nexus.com](https://docs.nexus.com)
-- **Issues**: [GitHub Issues](https://github.com/seu-usuario/nexus-erp/issues)
+### **Permissões por Módulo**
+- `dashboard.view` - Visualizar dashboard
+- `users.*` - Gestão de usuários
+- `crm.*` - Módulo CRM completo
+- `finance.*` - Módulo financeiro
+- `projects.*` - Gestão de projetos
+- `reports.view` - Visualizar relatórios
+- `settings.*` - Configurações do sistema
 
-## 🙏 Agradecimentos
+## 🔍 **Validação de CNPJ**
 
-- [Next.js](https://nextjs.org/) pela excelente framework
-- [Tailwind CSS](https://tailwindcss.com/) pelo sistema de design
-- [Lucide](https://lucide.dev/) pelos ícones
-- Comunidade open source
+O sistema integra com a **Receita Federal** para:
+- ✅ Validar formato do CNPJ
+- ✅ Verificar dígitos verificadores
+- ✅ Consultar dados da empresa
+- ✅ Preencher automaticamente informações
+- ✅ Verificar situação cadastral
+
+## 📱 **Responsividade**
+
+- **Desktop:** Interface completa
+- **Tablet:** Layout adaptado
+- **Mobile:** Interface otimizada
+
+## 🎨 **Design System**
+
+- **Cores:** Paleta empresarial profissional
+- **Tipografia:** Inter font para melhor legibilidade
+- **Componentes:** Baseados em shadcn/ui
+- **Tema:** Light mode com alto contraste
+
+## 🚀 **Próximos Passos**
+
+1. **Implementar módulos específicos** (CRM, Financeiro, etc.)
+2. **Adicionar relatórios avançados**
+3. **Implementar notificações em tempo real**
+4. **Adicionar integrações com APIs externas**
+5. **Implementar backup automático**
+6. **Adicionar testes automatizados**
+
+## 📞 **Suporte**
+
+Para dúvidas ou suporte técnico:
+- **Email:** suporte@cortus.com
+- **Documentação:** [docs.cortus.com](https://docs.cortus.com)
+- **GitHub:** [github.com/cortus/erp](https://github.com/cortus/erp)
 
 ---
 
-**Desenvolvido com ❤️ pela equipe Nexus Tech**
+**Cortus ERP** - Transformando a gestão empresarial brasileira 🚀

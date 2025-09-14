@@ -1,55 +1,34 @@
-import Link from 'next/link';
+'use client';
+
+import { useAuth } from '@/contexts/AuthContext-simple';
+import { useRouter } from 'next/navigation';
+import { useEffect } from 'react';
+import { Loader2 } from 'lucide-react';
 
 export default function HomePage() {
-  return (
-    <div className="min-h-screen bg-gradient-to-br from-background via-background to-muted/20 flex items-center justify-center">
-      <div className="w-full max-w-md mx-auto p-8">
-        <div className="text-center space-y-8">
-          {/* Logo/Brand */}
-          <div className="space-y-4">
-            <div className="mx-auto w-16 h-16 bg-primary rounded-2xl flex items-center justify-center">
-              <span className="text-2xl font-bold text-primary-foreground">N</span>
-            </div>
-            <div className="space-y-2">
-              <h1 className="text-3xl font-bold tracking-tight">Nexus ERP</h1>
-              <p className="text-muted-foreground text-lg">
-                Sistema completo de gestão empresarial
-              </p>
-            </div>
-          </div>
+  const { user, loading } = useAuth();
+  const router = useRouter();
 
-          {/* Features */}
-          <div className="space-y-4 text-sm text-muted-foreground">
-            <div className="flex items-center justify-center space-x-2">
-              <div className="w-2 h-2 bg-primary rounded-full"></div>
-              <span>Gestão de Negócios</span>
-            </div>
-            <div className="flex items-center justify-center space-x-2">
-              <div className="w-2 h-2 bg-primary rounded-full"></div>
-              <span>Controle Financeiro</span>
-            </div>
-            <div className="flex items-center justify-center space-x-2">
-              <div className="w-2 h-2 bg-primary rounded-full"></div>
-              <span>Gestão de Projetos</span>
-            </div>
-          </div>
+  useEffect(() => {
+    if (!loading) {
+      if (user) {
+        router.push('/dashboard');
+      } else {
+        router.push('/login');
+      }
+    }
+  }, [user, loading, router]);
 
-          {/* Enter Button */}
-          <div className="pt-8">
-            <Link 
-              href="/dashboard"
-              className="inline-flex items-center justify-center w-full px-8 py-4 text-lg font-medium text-primary-foreground bg-primary rounded-2xl hover:bg-primary/90 transition-colors focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2"
-            >
-              Entrar no Sistema
-            </Link>
-          </div>
-
-          {/* Footer */}
-          <div className="pt-8 text-xs text-muted-foreground">
-            <p>© 2024 Nexus ERP. Todos os direitos reservados.</p>
-          </div>
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-background via-background to-muted/20 flex items-center justify-center">
+        <div className="text-center">
+          <Loader2 className="h-8 w-8 animate-spin mx-auto mb-4 text-primary" />
+          <p className="text-muted-foreground">Carregando...</p>
         </div>
       </div>
-    </div>
-  );
+    );
+  }
+
+  return null; // Será redirecionado pelo useEffect
 }

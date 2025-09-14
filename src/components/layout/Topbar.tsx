@@ -1,11 +1,27 @@
 "use client";
 import { useState, useRef, useEffect } from 'react';
 import Link from 'next/link';
+import { useAuth } from '@/contexts/AuthContext-simple';
 import { Search, Bell, Calendar, Mail, User, ChevronDown, Settings, LogOut } from 'lucide-react';
 
-export function Topbar({ orgLabel, roleLabel }: { orgLabel?: string; roleLabel?: string }){
+export function Topbar({ 
+  orgLabel, 
+  roleLabel, 
+  userName, 
+  userEmail 
+}: { 
+  orgLabel?: string; 
+  roleLabel?: string;
+  userName?: string;
+  userEmail?: string;
+}){
+  const { signOut } = useAuth();
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
+
+  const handleSignOut = async () => {
+    await signOut();
+  };
 
   useEffect(() => {
     function handleClickOutside(event: MouseEvent) {
@@ -73,7 +89,7 @@ export function Topbar({ orgLabel, roleLabel }: { orgLabel?: string; roleLabel?:
               <User className="w-4 h-4 text-primary-foreground" />
             </div>
             <div className="hidden md:block text-sm">
-              <div className="font-medium">Usuário</div>
+              <div className="font-medium">{userName ?? 'Usuário'}</div>
               <div className="text-xs text-muted-foreground capitalize">{roleLabel ?? 'admin'}</div>
             </div>
             <ChevronDown className={`w-4 h-4 text-muted-foreground transition-transform ${isDropdownOpen ? 'rotate-180' : ''}`} />
@@ -83,7 +99,8 @@ export function Topbar({ orgLabel, roleLabel }: { orgLabel?: string; roleLabel?:
           {isDropdownOpen && (
             <div className="absolute right-0 mt-2 w-48 bg-card border border-border rounded-xl shadow-lg py-2 z-50">
               <div className="px-4 py-3 border-b border-border">
-                <div className="font-medium text-sm">Usuário</div>
+                <div className="font-medium text-sm">{userName ?? 'Usuário'}</div>
+                <div className="text-xs text-muted-foreground">{userEmail}</div>
                 <div className="text-xs text-muted-foreground capitalize">{roleLabel ?? 'admin'}</div>
               </div>
               
@@ -102,7 +119,10 @@ export function Topbar({ orgLabel, roleLabel }: { orgLabel?: string; roleLabel?:
                 
                 <div className="border-t border-border my-1"></div>
                 
-                <button className="w-full flex items-center space-x-3 px-4 py-2 text-sm text-red-600 hover:bg-red-50 hover:text-red-700 transition-colors">
+                <button 
+                  onClick={handleSignOut}
+                  className="w-full flex items-center space-x-3 px-4 py-2 text-sm text-red-600 hover:bg-red-50 hover:text-red-700 transition-colors"
+                >
                   <LogOut className="w-4 h-4" />
                   <span>Sair</span>
                 </button>
