@@ -3,8 +3,9 @@ import { useState, useRef, useEffect } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '@/contexts/AuthContext-enhanced';
+import { useSidebar } from '@/contexts/SidebarContext';
 import { supabase } from '@/lib/supabase';
-import { Search, Bell, Calendar, Mail, User, ChevronDown, Settings, LogOut } from 'lucide-react';
+import { Search, Bell, Calendar, Mail, User, ChevronDown, Settings, LogOut, Menu } from 'lucide-react';
 
 export function Topbar({ 
   orgLabel, 
@@ -20,6 +21,7 @@ export function Topbar({
   userAvatar?: string;
 }){
   const { signOut } = useAuth();
+  const { toggleSidebar } = useSidebar();
   const router = useRouter();
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
   const [orgName, setOrgName] = useState<string>('Organização');
@@ -85,8 +87,15 @@ export function Topbar({
 
   return (
     <header className="h-16 border-b border-border bg-card/50 backdrop-blur-sm flex items-center justify-between px-6">
-      {/* Left side - Breadcrumb */}
+      {/* Left side - Menu button and Breadcrumb */}
           <div className="flex items-center space-x-4">
+            <button
+              onClick={toggleSidebar}
+              className="p-2 hover:bg-gray-100 rounded-md transition-colors lg:hidden"
+              title="Alternar sidebar"
+            >
+              <Menu className="w-6 h-6" />
+            </button>
             <div className="text-sm text-muted-foreground">
               <span className="font-medium">{orgName}</span>
               <span className="mx-2">•</span>

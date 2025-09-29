@@ -69,7 +69,7 @@ export default function ContactList({ contacts, onEdit, onDelete, onView, onBulk
   // Listener para mudanças no localStorage (avatars)
   useEffect(() => {
     const handleStorageChange = (e: StorageEvent) => {
-      if (e.key && e.key.startsWith('contact_avatar_')) {
+      if (e.key && (e.key.startsWith('contact_avatar_') || e.key.startsWith('company_avatar_'))) {
         setAvatarRefresh(prev => prev + 1);
       }
     };
@@ -80,7 +80,7 @@ export default function ContactList({ contacts, onEdit, onDelete, onView, onBulk
     const originalSetItem = localStorage.setItem;
     localStorage.setItem = function(key, value) {
       originalSetItem.apply(this, [key, value]);
-      if (key.startsWith('contact_avatar_')) {
+      if (key.startsWith('contact_avatar_') || key.startsWith('company_avatar_')) {
         setAvatarRefresh(prev => prev + 1);
       }
     };

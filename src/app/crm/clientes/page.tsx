@@ -91,19 +91,7 @@ export default function ContatosPage() {
     return null; // Será redirecionado pelo ProtectedLayout
   }
 
-  const permissions = user.permissions || [];
-  if (!can(permissions, 'crm.clients.view')) {
-    return (
-      <ProtectedLayout>
-        <div className="p-6">
-          <div className="text-center">
-            <h2 className="text-2xl font-bold text-gray-900 mb-2">Acesso Negado</h2>
-            <p className="text-gray-600">Você não tem permissão para acessar esta página.</p>
-          </div>
-        </div>
-      </ProtectedLayout>
-    );
-  }
+  // Removido verificação de permissão - acesso liberado para todos os usuários autenticados
 
   const handleSaveContact = async (contactData: Omit<Contact, 'id' | 'created_at' | 'updated_at' | 'organization_id'>) => {
     if (!user?.orgId) return;

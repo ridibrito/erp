@@ -1,12 +1,10 @@
-import { redirect } from 'next/navigation';
-import { getCurrentMember } from '@/lib/session';
-import { can } from '@/lib/authz';
-import { RequireScope } from '@/components/auth/RequireScope';
+'use client';
+
+import { ProtectedLayout } from '@/components/layout/ProtectedLayout';
 import { Plus, Search, Filter, MoreHorizontal, FileText, Calendar, DollarSign, User, Clock, CheckCircle, AlertCircle, Archive } from 'lucide-react';
 
-export default async function ContratosPage() {
-  const m = await getCurrentMember();
-  if (!m || !can(m.scopes, 'crm:read')) redirect('/403');
+export default function ContratosPage() {
+  // Removido verificação de permissão - acesso liberado para todos os usuários autenticados
 
   // Mock data
   const contratos = [
@@ -98,18 +96,18 @@ export default async function ContratosPage() {
   };
 
   return (
-    <div className="space-y-6">
+    <ProtectedLayout>
+      <div className="p-6">
+        <div className="space-y-6">
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-2xl font-bold">Contratos</h1>
           <p className="text-muted-foreground">Gerencie seus contratos e acordos comerciais</p>
         </div>
-        <RequireScope scopes={m.scopes} need="crm:write">
-          <button className="inline-flex items-center px-4 py-2 bg-primary text-primary-foreground rounded-md hover:bg-primary/90 transition-colors">
-            <Plus className="w-4 h-4 mr-2" />
-            Novo Contrato
-          </button>
-        </RequireScope>
+        <button className="inline-flex items-center px-4 py-2 bg-primary text-primary-foreground rounded-md hover:bg-primary/90 transition-colors">
+          <Plus className="w-4 h-4 mr-2" />
+          Novo Contrato
+        </button>
       </div>
 
       {/* Stats Cards */}
@@ -216,6 +214,7 @@ export default async function ContratosPage() {
           </table>
         </div>
       </div>
-    </div>
+      </div>
+    </ProtectedLayout>
   );
 }

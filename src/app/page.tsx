@@ -12,8 +12,8 @@ export default function HomePage() {
   useEffect(() => {
     if (!loading) {
       if (user) {
-        console.log('HomePage: Usuário autenticado, redirecionando para dashboard');
-        router.push('/dashboard');
+        console.log('HomePage: Usuário autenticado, redirecionando para clientes');
+        router.push('/crm/clientes');
       } else {
         console.log('HomePage: Usuário não autenticado, redirecionando para login');
         router.push('/login');

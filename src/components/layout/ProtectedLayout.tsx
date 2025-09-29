@@ -4,6 +4,7 @@ import { useAuth } from '@/contexts/AuthContext-enhanced';
 import { Sidebar } from './Sidebar';
 import { Topbar } from './Topbar';
 import { AuthGuard } from '@/components/auth/AuthGuard';
+import { SidebarProvider } from '@/contexts/SidebarContext';
 
 interface ProtectedLayoutProps {
   children: React.ReactNode;
@@ -19,21 +20,23 @@ export function ProtectedLayout({ children }: ProtectedLayoutProps) {
 
   return (
     <AuthGuard requireAuth={true}>
-      <div className="flex h-screen">
-        <Sidebar scopes={user?.permissions || []} />
-        <main className="flex-1 flex flex-col overflow-hidden">
-          <Topbar 
-            orgLabel={user?.orgId || ''} 
-            roleLabel={user?.role || ''}
-            userName={user?.name || ''}
-            userEmail={user?.email || ''}
-            userAvatar={user?.avatar || ''}
-          />
-          <div className="flex-1 p-6 overflow-auto">
-            {children}
-          </div>
-        </main>
-      </div>
+      <SidebarProvider>
+        <div className="flex h-screen">
+          <Sidebar scopes={user?.permissions || []} />
+          <main className="flex-1 flex flex-col overflow-hidden lg:ml-0">
+            <Topbar 
+              orgLabel={user?.orgId || ''} 
+              roleLabel={user?.role || ''}
+              userName={user?.name || ''}
+              userEmail={user?.email || ''}
+              userAvatar={user?.avatar || ''}
+            />
+            <div className="flex-1 p-6 overflow-auto">
+              {children}
+            </div>
+          </main>
+        </div>
+      </SidebarProvider>
     </AuthGuard>
   );
 }

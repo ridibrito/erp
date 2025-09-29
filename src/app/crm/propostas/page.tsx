@@ -1,12 +1,10 @@
-import { redirect } from 'next/navigation';
-import { getCurrentMember } from '@/lib/session';
-import { can } from '@/lib/authz';
-import { RequireScope } from '@/components/auth/RequireScope';
+'use client';
+
+import { ProtectedLayout } from '@/components/layout/ProtectedLayout';
 import { Plus, Search, Filter, MoreHorizontal, FileText, Calendar, DollarSign, User, Clock, CheckCircle, XCircle } from 'lucide-react';
 
-export default async function PropostasPage() {
-  const m = await getCurrentMember();
-  if (!m || !can(m.scopes, 'crm:read')) redirect('/403');
+export default function PropostasPage() {
+  // Removido verificação de permissão - acesso liberado para todos os usuários autenticados
 
   // Mock data
   const propostas = [
@@ -79,18 +77,18 @@ export default async function PropostasPage() {
   };
 
   return (
-    <div className="space-y-6">
+    <ProtectedLayout>
+      <div className="p-6">
+        <div className="space-y-6">
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-2xl font-bold">Propostas</h1>
           <p className="text-muted-foreground">Gerencie suas propostas comerciais</p>
         </div>
-        <RequireScope scopes={m.scopes} need="crm:write">
-          <button className="inline-flex items-center px-4 py-2 bg-primary text-primary-foreground rounded-md hover:bg-primary/90 transition-colors">
-            <Plus className="w-4 h-4 mr-2" />
-            Nova Proposta
-          </button>
-        </RequireScope>
+        <button className="inline-flex items-center px-4 py-2 bg-primary text-primary-foreground rounded-md hover:bg-primary/90 transition-colors">
+          <Plus className="w-4 h-4 mr-2" />
+          Nova Proposta
+        </button>
       </div>
 
       {/* Stats Cards */}
@@ -207,6 +205,7 @@ export default async function PropostasPage() {
           </table>
         </div>
       </div>
-    </div>
+      </div>
+    </ProtectedLayout>
   );
 }

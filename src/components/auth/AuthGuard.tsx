@@ -27,8 +27,8 @@ export function AuthGuard({
         console.log('AuthGuard: Usuário não autenticado, redirecionando para:', redirectTo);
         router.push(redirectTo);
       } else if (!requireAuth && user) {
-        console.log('AuthGuard: Usuário já autenticado, redirecionando para dashboard');
-        router.push('/dashboard');
+        console.log('AuthGuard: Usuário já autenticado, redirecionando para clientes');
+        router.push('/crm/clientes');
       }
     }
   }, [user, loading, requireAuth, redirectTo, router]);
