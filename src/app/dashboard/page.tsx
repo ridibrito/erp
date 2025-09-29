@@ -1,8 +1,10 @@
 'use client';
 
-import { useAuth } from '@/contexts/AuthContext-simple';
+import { useAuth } from '@/contexts/AuthContext-enhanced';
 import { ProtectedLayout } from '@/components/layout/ProtectedLayout';
 import { can } from '@/lib/authz';
+import { supabase } from '@/lib/supabase';
+import { useState, useEffect } from 'react';
 import { 
   BarChart, 
   Bar, 
@@ -31,17 +33,58 @@ import {
   CheckCircle,
   Clock,
   Target,
-  Activity
+  Activity,
+  Building2,
+  CreditCard,
+  Receipt
 } from 'lucide-react';
 
 export default function DashboardPage() {
   const { user } = useAuth();
+  const [dashboardData, setDashboardData] = useState({
+    totalClients: 0,
+    totalRevenue: 0,
+    pendingInvoices: 0,
+    activeProjects: 0,
+    recentActivities: [] as Array<{ id: number; type: string; message: string; time: string; }>
+  });
+  const [loading, setLoading] = useState(true);
   
   if (!user) {
     return null; // Será redirecionado pelo ProtectedLayout
   }
 
   const permissions = user.permissions || [];
+
+  // Carregar dados do dashboard
+  useEffect(() => {
+    const loadDashboardData = async () => {
+      try {
+        setLoading(true);
+        
+        // Carregar dados básicos (simulados por enquanto)
+        // TODO: Implementar queries reais quando as tabelas estiverem prontas
+        setDashboardData({
+          totalClients: 1247,
+          totalRevenue: 328000,
+          pendingInvoices: 23,
+          activeProjects: 8,
+          recentActivities: [
+            { id: 1, type: 'client', message: 'Novo cliente cadastrado', time: '2 min atrás' },
+            { id: 2, type: 'invoice', message: 'Fatura #1234 paga', time: '15 min atrás' },
+            { id: 3, type: 'project', message: 'Projeto Alpha concluído', time: '1 hora atrás' },
+            { id: 4, type: 'client', message: 'Reunião agendada com Cliente XYZ', time: '2 horas atrás' }
+          ]
+        });
+      } catch (error) {
+        console.error('Erro ao carregar dados do dashboard:', error);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    loadDashboardData();
+  }, [user?.orgId]);
   
   // Verificar permissões para diferentes módulos
   const canViewCRM = can(permissions, 'crm.leads.view');
@@ -80,7 +123,7 @@ export default function DashboardPage() {
   const metrics = [
     {
       title: 'Receita Total',
-      value: 'R$ 328.000',
+      value: `R$ ${dashboardData.totalRevenue.toLocaleString('pt-BR')}`,
       change: '+12.5%',
       changeType: 'positive',
       icon: DollarSign,
@@ -88,8 +131,8 @@ export default function DashboardPage() {
       bgColor: 'bg-green-50'
     },
     {
-      title: 'Novos Clientes',
-      value: '1,247',
+      title: 'Total de Clientes',
+      value: dashboardData.totalClients.toLocaleString('pt-BR'),
       change: '+8.2%',
       changeType: 'positive',
       icon: Users,
@@ -97,22 +140,22 @@ export default function DashboardPage() {
       bgColor: 'bg-blue-50'
     },
     {
-      title: 'Vendas',
-      value: '89',
-      change: '+15.3%',
+      title: 'Faturas Pendentes',
+      value: dashboardData.pendingInvoices.toString(),
+      change: '-5.1%',
       changeType: 'positive',
-      icon: ShoppingCart,
-      color: 'text-purple-600',
-      bgColor: 'bg-purple-50'
-    },
-    {
-      title: 'Taxa de Conversão',
-      value: '68.4%',
-      change: '+2.1%',
-      changeType: 'positive',
-      icon: Target,
+      icon: Receipt,
       color: 'text-orange-600',
       bgColor: 'bg-orange-50'
+    },
+    {
+      title: 'Projetos Ativos',
+      value: dashboardData.activeProjects.toString(),
+      change: '+3.2%',
+      changeType: 'positive',
+      icon: Target,
+      color: 'text-purple-600',
+      bgColor: 'bg-purple-50'
     }
   ];
 
@@ -155,6 +198,18 @@ export default function DashboardPage() {
     }
   ];
 
+  if (loading) {
+    return (
+      <ProtectedLayout>
+        <div className="p-6 space-y-6">
+          <div className="flex items-center justify-center h-64">
+            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary"></div>
+          </div>
+        </div>
+      </ProtectedLayout>
+    );
+  }
+
   return (
     <ProtectedLayout>
       <div className="p-6 space-y-6">
@@ -165,13 +220,13 @@ export default function DashboardPage() {
               Dashboard
             </h1>
             <p className="text-gray-600 mt-1">
-              Visão geral do seu negócio
+              Bem-vindo de volta, {user.name}! Aqui está um resumo do seu negócio.
             </p>
           </div>
           <div className="flex items-center space-x-3 text-sm text-gray-600">
             <div className="flex items-center space-x-2">
-              <Users className="w-4 h-4" />
-              <span>{user.name}</span>
+              <Building2 className="w-4 h-4" />
+              <span>ALB Soluções</span>
             </div>
             <div className="flex items-center space-x-2">
               <Calendar className="w-4 h-4" />
@@ -299,56 +354,79 @@ export default function DashboardPage() {
           </ResponsiveContainer>
         </div>
 
-        {/* Módulos de Acesso */}
-        <div className="bg-white p-6 rounded-xl shadow-sm border border-gray-200">
-          <h3 className="text-lg font-semibold text-gray-900 mb-4">Módulos do Sistema</h3>
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-            {modules.map((module, index) => {
-              const IconComponent = module.icon;
-              return (
-                <div
-                  key={index}
-                  className={`p-4 rounded-lg border-2 transition-all ${
-                    module.canAccess
-                      ? 'border-gray-200 bg-white hover:border-gray-300 hover:shadow-md'
-                      : 'border-gray-100 bg-gray-50 opacity-50'
-                  }`}
-                >
-                  <div className="flex items-center mb-3">
-                    <div className={`p-2 rounded-lg ${module.bgColor} mr-3`}>
-                      <IconComponent className={`w-5 h-5 ${module.color}`} />
-                    </div>
-                    <h4 className="font-semibold text-gray-900">{module.name}</h4>
+        {/* Atividades Recentes e Módulos */}
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+          {/* Atividades Recentes */}
+          <div className="lg:col-span-1 bg-white p-6 rounded-xl shadow-sm border border-gray-200">
+            <h3 className="text-lg font-semibold text-gray-900 mb-4">Atividades Recentes</h3>
+            <div className="space-y-4">
+              {dashboardData.recentActivities.map((activity) => (
+                <div key={activity.id} className="flex items-start space-x-3">
+                  <div className="flex-shrink-0">
+                    {activity.type === 'client' && <Users className="w-4 h-4 text-blue-500 mt-1" />}
+                    {activity.type === 'invoice' && <Receipt className="w-4 h-4 text-green-500 mt-1" />}
+                    {activity.type === 'project' && <FileText className="w-4 h-4 text-purple-500 mt-1" />}
                   </div>
-                  
-                  <p className="text-sm text-gray-600 mb-3">{module.description}</p>
-                  
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center">
-                      {module.canAccess ? (
-                        <CheckCircle className="w-4 h-4 text-green-500 mr-1" />
-                      ) : (
-                        <AlertCircle className="w-4 h-4 text-gray-400 mr-1" />
-                      )}
-                      <span className={`text-xs ${
-                        module.canAccess ? 'text-green-600' : 'text-gray-500'
-                      }`}>
-                        {module.canAccess ? 'Acesso liberado' : 'Sem permissão'}
-                      </span>
-                    </div>
-                    
-                    {module.canAccess && (
-                      <a
-                        href={module.href}
-                        className="text-sm font-medium text-blue-600 hover:text-blue-800 transition-colors"
-                      >
-                        Acessar
-                      </a>
-                    )}
+                  <div className="flex-1 min-w-0">
+                    <p className="text-sm text-gray-900">{activity.message}</p>
+                    <p className="text-xs text-gray-500">{activity.time}</p>
                   </div>
                 </div>
-              );
-            })}
+              ))}
+            </div>
+          </div>
+
+          {/* Módulos de Acesso */}
+          <div className="lg:col-span-2 bg-white p-6 rounded-xl shadow-sm border border-gray-200">
+            <h3 className="text-lg font-semibold text-gray-900 mb-4">Módulos do Sistema</h3>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              {modules.map((module, index) => {
+                const IconComponent = module.icon;
+                return (
+                  <div
+                    key={index}
+                    className={`p-4 rounded-lg border-2 transition-all ${
+                      module.canAccess
+                        ? 'border-gray-200 bg-white hover:border-gray-300 hover:shadow-md'
+                        : 'border-gray-100 bg-gray-50 opacity-50'
+                    }`}
+                  >
+                    <div className="flex items-center mb-3">
+                      <div className={`p-2 rounded-lg ${module.bgColor} mr-3`}>
+                        <IconComponent className={`w-5 h-5 ${module.color}`} />
+                      </div>
+                      <h4 className="font-semibold text-gray-900">{module.name}</h4>
+                    </div>
+                    
+                    <p className="text-sm text-gray-600 mb-3">{module.description}</p>
+                    
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center">
+                        {module.canAccess ? (
+                          <CheckCircle className="w-4 h-4 text-green-500 mr-1" />
+                        ) : (
+                          <AlertCircle className="w-4 h-4 text-gray-400 mr-1" />
+                        )}
+                        <span className={`text-xs ${
+                          module.canAccess ? 'text-green-600' : 'text-gray-500'
+                        }`}>
+                          {module.canAccess ? 'Acesso liberado' : 'Sem permissão'}
+                        </span>
+                      </div>
+                      
+                      {module.canAccess && (
+                        <a
+                          href={module.href}
+                          className="text-sm font-medium text-blue-600 hover:text-blue-800 transition-colors"
+                        >
+                          Acessar
+                        </a>
+                      )}
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
           </div>
         </div>
       </div>

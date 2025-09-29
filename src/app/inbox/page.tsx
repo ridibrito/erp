@@ -1,6 +1,7 @@
 "use client";
 import { useState, useEffect } from 'react';
 import { Mail, Search, Filter, Star, StarOff, Trash2, Archive, Reply, Forward, MoreHorizontal, Paperclip, User, Clock } from 'lucide-react';
+import { ProtectedLayout } from '@/components/layout/ProtectedLayout';
 
 interface Email {
   id: string;
@@ -129,7 +130,8 @@ export default function InboxPage() {
   };
 
   return (
-    <div className="h-full flex">
+    <ProtectedLayout>
+      <div className="h-full flex">
       {/* Sidebar */}
       <div className="w-64 bg-white border-r border-gray-200 p-4">
         <div className="space-y-4">
@@ -401,6 +403,7 @@ export default function InboxPage() {
           </div>
         </div>
       </div>
-    </div>
+      </div>
+    </ProtectedLayout>
   );
 }

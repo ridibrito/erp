@@ -1,26 +1,75 @@
 "use client";
 import { useState, useRef, useEffect } from 'react';
 import Link from 'next/link';
-import { useAuth } from '@/contexts/AuthContext-simple';
+import { useRouter } from 'next/navigation';
+import { useAuth } from '@/contexts/AuthContext-enhanced';
+import { supabase } from '@/lib/supabase';
 import { Search, Bell, Calendar, Mail, User, ChevronDown, Settings, LogOut } from 'lucide-react';
 
 export function Topbar({ 
   orgLabel, 
   roleLabel, 
   userName, 
-  userEmail 
+  userEmail,
+  userAvatar
 }: { 
   orgLabel?: string; 
   roleLabel?: string;
   userName?: string;
   userEmail?: string;
+  userAvatar?: string;
 }){
   const { signOut } = useAuth();
+  const router = useRouter();
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
+  const [orgName, setOrgName] = useState<string>('Organização');
   const dropdownRef = useRef<HTMLDivElement>(null);
 
+  console.log('Topbar: orgLabel:', orgLabel);
+  console.log('Topbar: roleLabel:', roleLabel);
+  console.log('Topbar: userName:', userName);
+  console.log('Topbar: userEmail:', userEmail);
+
+  // Buscar nome da organização do banco de dados
+  useEffect(() => {
+    const fetchOrgName = async () => {
+      if (orgLabel) {
+        try {
+          const { data, error } = await supabase
+            .from('organizations')
+            .select('fantasy_name, name')
+            .eq('id', orgLabel)
+            .single();
+          
+          if (error) {
+            console.error('Topbar: Erro ao buscar organização:', error);
+            return;
+          }
+          
+          // Usar fantasy_name se disponível, senão usar name (razão social)
+          const displayName = data?.fantasy_name || data?.name || 'Organização';
+          console.log('Topbar: Nome da organização carregado:', displayName);
+          setOrgName(displayName);
+        } catch (error) {
+          console.error('Topbar: Erro ao buscar organização:', error);
+        }
+      }
+    };
+
+    fetchOrgName();
+  }, [orgLabel]);
+
   const handleSignOut = async () => {
-    await signOut();
+    try {
+      console.log('Topbar: Iniciando logout...');
+      await signOut();
+      console.log('Topbar: Logout realizado, redirecionando para login...');
+      router.push('/login');
+    } catch (error) {
+      console.error('Erro ao fazer logout:', error);
+      // Mesmo com erro, redirecionar para login
+      router.push('/login');
+    }
   };
 
   useEffect(() => {
@@ -37,13 +86,13 @@ export function Topbar({
   return (
     <header className="h-16 border-b border-border bg-card/50 backdrop-blur-sm flex items-center justify-between px-6">
       {/* Left side - Breadcrumb */}
-      <div className="flex items-center space-x-4">
-        <div className="text-sm text-muted-foreground">
-          <span className="font-medium">{orgLabel ?? 'Organização'}</span>
-          <span className="mx-2">•</span>
-          <span className="capitalize">{roleLabel ?? 'Usuário'}</span>
-        </div>
-      </div>
+          <div className="flex items-center space-x-4">
+            <div className="text-sm text-muted-foreground">
+              <span className="font-medium">{orgName}</span>
+              <span className="mx-2">•</span>
+              <span className="capitalize">{roleLabel ?? 'Usuário'}</span>
+            </div>
+          </div>
 
       {/* Center - Search */}
       <div className="flex-1 max-w-md mx-8">
@@ -85,8 +134,16 @@ export function Topbar({
             onClick={() => setIsDropdownOpen(!isDropdownOpen)}
             className="flex items-center space-x-3 p-2 rounded-xl hover:bg-muted/50 transition-colors cursor-pointer"
           >
-            <div className="w-8 h-8 bg-primary rounded-lg flex items-center justify-center">
-              <User className="w-4 h-4 text-primary-foreground" />
+            <div className="w-8 h-8 bg-primary rounded-lg flex items-center justify-center overflow-hidden">
+              {userAvatar ? (
+                <img 
+                  src={userAvatar} 
+                  alt="Avatar" 
+                  className="w-full h-full object-cover rounded-lg"
+                />
+              ) : (
+                <User className="w-4 h-4 text-primary-foreground" />
+              )}
             </div>
             <div className="hidden md:block text-sm">
               <div className="font-medium">{userName ?? 'Usuário'}</div>
@@ -97,7 +154,7 @@ export function Topbar({
 
           {/* Dropdown Menu */}
           {isDropdownOpen && (
-            <div className="absolute right-0 mt-2 w-48 bg-card border border-border rounded-xl shadow-lg py-2 z-50">
+            <div className="absolute right-0 mt-2 w-48 bg-card border border-border rounded-xl shadow-lg py-2 z-[9999]">
               <div className="px-4 py-3 border-b border-border">
                 <div className="font-medium text-sm">{userName ?? 'Usuário'}</div>
                 <div className="text-xs text-muted-foreground">{userEmail}</div>
@@ -106,13 +163,13 @@ export function Topbar({
               
               <div className="py-1">
                 <Link href="/perfil">
-                  <button className="w-full flex items-center space-x-3 px-4 py-2 text-sm text-muted-foreground hover:bg-muted/50 hover:text-foreground transition-colors">
+                  <button className="w-full flex items-center space-x-3 px-4 py-2 text-sm text-muted-foreground hover:bg-muted/50 hover:text-foreground transition-colors cursor-pointer">
                     <User className="w-4 h-4" />
                     <span>Meu Perfil</span>
                   </button>
                 </Link>
                 
-                <button className="w-full flex items-center space-x-3 px-4 py-2 text-sm text-muted-foreground hover:bg-muted/50 hover:text-foreground transition-colors">
+                <button className="w-full flex items-center space-x-3 px-4 py-2 text-sm text-muted-foreground hover:bg-muted/50 hover:text-foreground transition-colors cursor-pointer">
                   <Settings className="w-4 h-4" />
                   <span>Configurações</span>
                 </button>
@@ -121,7 +178,7 @@ export function Topbar({
                 
                 <button 
                   onClick={handleSignOut}
-                  className="w-full flex items-center space-x-3 px-4 py-2 text-sm text-red-600 hover:bg-red-50 hover:text-red-700 transition-colors"
+                  className="w-full flex items-center space-x-3 px-4 py-2 text-sm text-red-600 hover:bg-red-50 hover:text-red-700 transition-colors cursor-pointer"
                 >
                   <LogOut className="w-4 h-4" />
                   <span>Sair</span>

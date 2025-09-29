@@ -1,151 +1,138 @@
-/**
- * Validador de CNPJ para empresas brasileiras
- * Inclui validação de dígitos verificadores e consulta à Receita Federal
- */
-
+// Validador de CNPJ e integração com API Brasil
 export interface CNPJData {
   cnpj: string;
-  razaoSocial: string;
-  nomeFantasia?: string;
-  situacao: string;
-  dataSituacao: string;
-  endereco: {
-    logradouro: string;
-    numero: string;
-    complemento?: string;
-    bairro: string;
-    municipio: string;
-    uf: string;
-    cep: string;
-  };
+  razao_social: string;
+  nome_fantasia?: string;
+  logradouro: string;
+  numero: string;
+  complemento?: string;
+  bairro: string;
+  municipio: string;
+  uf: string;
+  cep: string;
   telefone?: string;
   email?: string;
-  capitalSocial?: string;
-  porte?: string;
-  naturezaJuridica?: string;
-  abertura?: string;
+  situacao: string;
+  data_situacao: string;
+  capital_social: string;
+  porte: string;
+  natureza_juridica: string;
+  abertura: string;
 }
 
-/**
- * Remove caracteres especiais do CNPJ
- */
-export function cleanCNPJ(cnpj: string): string {
-  return cnpj.replace(/[^\d]/g, '');
+export interface CNPJValidationResult {
+  isValid: boolean;
+  data?: CNPJData;
+  error?: string;
 }
 
-/**
- * Valida se o CNPJ tem 14 dígitos
- */
-export function isValidCNPJLength(cnpj: string): boolean {
-  const clean = cleanCNPJ(cnpj);
-  return clean.length === 14;
-}
-
-/**
- * Valida se o CNPJ não é uma sequência de números iguais
- */
-export function isNotRepeatedSequence(cnpj: string): boolean {
-  const clean = cleanCNPJ(cnpj);
-  return !/^(\d)\1+$/.test(clean);
-}
-
-/**
- * Calcula o primeiro dígito verificador do CNPJ
- */
-function calculateFirstDigit(cnpj: string): number {
-  const weights = [5, 4, 3, 2, 9, 8, 7, 6, 5, 4, 3, 2];
-  let sum = 0;
+// Função para validar formato do CNPJ
+export function validateCNPJFormat(cnpj: string): boolean {
+  // Remove caracteres não numéricos
+  const cleanCNPJ = cnpj.replace(/\D/g, '');
   
-  for (let i = 0; i < 12; i++) {
-    sum += parseInt(cnpj[i]) * weights[i];
-  }
-  
-  const remainder = sum % 11;
-  return remainder < 2 ? 0 : 11 - remainder;
-}
-
-/**
- * Calcula o segundo dígito verificador do CNPJ
- */
-function calculateSecondDigit(cnpj: string): number {
-  const weights = [6, 5, 4, 3, 2, 9, 8, 7, 6, 5, 4, 3, 2];
-  let sum = 0;
-  
-  for (let i = 0; i < 13; i++) {
-    sum += parseInt(cnpj[i]) * weights[i];
-  }
-  
-  const remainder = sum % 11;
-  return remainder < 2 ? 0 : 11 - remainder;
-}
-
-/**
- * Valida os dígitos verificadores do CNPJ
- */
-export function validateCNPJDigits(cnpj: string): boolean {
-  const clean = cleanCNPJ(cnpj);
-  
-  if (!isValidCNPJLength(clean) || !isNotRepeatedSequence(clean)) {
+  // Verifica se tem 14 dígitos
+  if (cleanCNPJ.length !== 14) {
     return false;
   }
   
-  const firstDigit = calculateFirstDigit(clean);
-  const secondDigit = calculateSecondDigit(clean);
+  // Verifica se não são todos os dígitos iguais
+  if (/^(\d)\1+$/.test(cleanCNPJ)) {
+    return false;
+  }
   
-  return (
-    parseInt(clean[12]) === firstDigit &&
-    parseInt(clean[13]) === secondDigit
-  );
+  // Validação dos dígitos verificadores
+  let sum = 0;
+  let weight = 2;
+  
+  // Primeiro dígito verificador
+  for (let i = 11; i >= 0; i--) {
+    sum += parseInt(cleanCNPJ[i]) * weight;
+    weight = weight === 9 ? 2 : weight + 1;
+  }
+  
+  const firstDigit = sum % 11 < 2 ? 0 : 11 - (sum % 11);
+  
+  if (parseInt(cleanCNPJ[12]) !== firstDigit) {
+    return false;
+  }
+  
+  // Segundo dígito verificador
+  sum = 0;
+  weight = 2;
+  
+  for (let i = 12; i >= 0; i--) {
+    sum += parseInt(cleanCNPJ[i]) * weight;
+    weight = weight === 9 ? 2 : weight + 1;
+  }
+  
+  const secondDigit = sum % 11 < 2 ? 0 : 11 - (sum % 11);
+  
+  return parseInt(cleanCNPJ[13]) === secondDigit;
 }
 
-/**
- * Formata o CNPJ para exibição (XX.XXX.XXX/XXXX-XX)
- */
+// Função para formatar CNPJ
 export function formatCNPJ(cnpj: string): string {
-  const clean = cleanCNPJ(cnpj);
-  return clean.replace(
-    /^(\d{2})(\d{3})(\d{3})(\d{4})(\d{2})$/,
-    '$1.$2.$3/$4-$5'
-  );
+  const cleanCNPJ = cnpj.replace(/\D/g, '');
+  
+  if (cleanCNPJ.length <= 14) {
+    return cleanCNPJ
+      .replace(/(\d{2})(\d)/, '$1.$2')
+      .replace(/(\d{3})(\d)/, '$1.$2')
+      .replace(/(\d{3})(\d)/, '$1/$2')
+      .replace(/(\d{4})(\d)/, '$1-$2');
+  }
+  
+  return cnpj;
 }
 
-/**
- * Consulta dados do CNPJ na API Brasil
- * Usa a API Brasil (https://brasilapi.com.br/) - API brasileira gratuita e confiável
- */
-export async function consultCNPJ(cnpj: string): Promise<CNPJData | null> {
+// Função para consultar CNPJ na API Brasil
+export async function validateCNPJWithAPI(cnpj: string): Promise<CNPJValidationResult> {
   try {
-    const clean = cleanCNPJ(cnpj);
-    
-    if (!validateCNPJDigits(clean)) {
-      throw new Error('CNPJ inválido');
+    // Primeiro valida o formato
+    if (!validateCNPJFormat(cnpj)) {
+      return {
+        isValid: false,
+        error: 'CNPJ inválido'
+      };
     }
     
-    // Usar a API Brasil (https://brasilapi.com.br/)
-    const response = await fetch(`https://brasilapi.com.br/api/cnpj/v1/${clean}`, {
-      method: 'GET',
-      headers: {
-        'Accept': 'application/json',
-      },
-    });
+    // Remove caracteres não numéricos
+    const cleanCNPJ = cnpj.replace(/\D/g, '');
+    
+    // Consulta a API Brasil
+    const response = await fetch(`https://brasilapi.com.br/api/cnpj/v1/${cleanCNPJ}`);
     
     if (!response.ok) {
-      throw new Error('Erro ao consultar CNPJ na API Brasil');
+      if (response.status === 404) {
+        return {
+          isValid: false,
+          error: 'CNPJ não encontrado na Receita Federal'
+        };
+      }
+      
+      return {
+        isValid: false,
+        error: 'Erro ao consultar CNPJ na Receita Federal'
+      };
     }
     
     const data = await response.json();
     
-    if (!data || data.status === 'ERROR') {
-      throw new Error('CNPJ não encontrado');
-    }
+          // Verifica se a empresa está ativa (algumas APIs não retornam situacao)
+          if (data.situacao && data.situacao !== 'ATIVA' && data.situacao !== 'undefined') {
+            return {
+              isValid: false,
+              error: `Empresa com situação: ${data.situacao}`
+            };
+          }
     
     return {
-      cnpj: clean,
-      razaoSocial: data.razao_social || '',
-      nomeFantasia: data.nome_fantasia || '',
-      situacao: data.descricao_situacao_cadastral || '',
-      dataSituacao: data.data_situacao_cadastral || '',
-      endereco: {
+      isValid: true,
+      data: {
+        cnpj: cleanCNPJ,
+        razao_social: data.razao_social || '',
+        nome_fantasia: data.nome_fantasia || '',
         logradouro: data.logradouro || '',
         numero: data.numero || '',
         complemento: data.complemento || '',
@@ -153,79 +140,21 @@ export async function consultCNPJ(cnpj: string): Promise<CNPJData | null> {
         municipio: data.municipio || '',
         uf: data.uf || '',
         cep: data.cep || '',
-      },
-      telefone: data.ddd_telefone_1 || '',
-      email: data.email || '',
-      capitalSocial: data.capital_social || '',
-      porte: data.porte || '',
-      naturezaJuridica: data.natureza_juridica || '',
-      abertura: data.data_inicio_atividade || '',
+        telefone: data.telefone || '',
+        email: data.email || '',
+        situacao: data.situacao || 'ATIVA',
+        data_situacao: data.data_situacao || '',
+        capital_social: data.capital_social || '',
+        porte: data.porte || '',
+        natureza_juridica: data.natureza_juridica || '',
+        abertura: data.abertura || ''
+      }
     };
-    
   } catch (error) {
-    console.error('Erro ao consultar CNPJ:', error);
-    
-    // Se for erro de rede, retornar dados mockados para desenvolvimento
-    if (error instanceof TypeError && error.message.includes('Failed to fetch')) {
-      console.warn('Erro de rede detectado, usando dados mockados para desenvolvimento');
-      return {
-        cnpj: clean,
-        razaoSocial: 'Empresa Mockada LTDA',
-        nomeFantasia: 'Empresa Mockada',
-        situacao: 'ATIVA',
-        dataSituacao: '2020-01-01',
-        endereco: {
-          logradouro: 'Rua Mockada',
-          numero: '123',
-          complemento: '',
-          bairro: 'Centro',
-          municipio: 'São Paulo',
-          uf: 'SP',
-          cep: '01234-567',
-        },
-        telefone: '(11) 99999-9999',
-        email: 'contato@empresamockada.com.br',
-        capitalSocial: 'R$ 100.000,00',
-        porte: 'MICROEMPRESA',
-        naturezaJuridica: 'Sociedade Empresária Limitada',
-        abertura: '2020-01-01',
-      };
-    }
-    
-    throw error;
+    console.error('Erro ao validar CNPJ:', error);
+    return {
+      isValid: false,
+      error: 'Erro interno ao validar CNPJ'
+    };
   }
-}
-
-/**
- * Validação completa do CNPJ
- */
-export function validateCNPJ(cnpj: string): {
-  isValid: boolean;
-  errors: string[];
-} {
-  const errors: string[] = [];
-  
-  if (!cnpj || cnpj.trim() === '') {
-    errors.push('CNPJ é obrigatório');
-    return { isValid: false, errors };
-  }
-  
-  const clean = cleanCNPJ(cnpj);
-  
-  if (!isValidCNPJLength(clean)) {
-    errors.push('CNPJ deve ter 14 dígitos');
-  }
-  
-  if (!isNotRepeatedSequence(clean)) {
-    errors.push('CNPJ não pode ser uma sequência de números iguais');
-  }
-  
-  if (!validateCNPJDigits(clean)) {
-    errors.push('CNPJ inválido - dígitos verificadores incorretos');
-  }
-  
-  return {
-    isValid: errors.length === 0,
-    errors
-  };
 }

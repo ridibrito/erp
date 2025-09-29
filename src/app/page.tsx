@@ -1,6 +1,6 @@
 'use client';
 
-import { useAuth } from '@/contexts/AuthContext-simple';
+import { useAuth } from '@/contexts/AuthContext-enhanced';
 import { useRouter } from 'next/navigation';
 import { useEffect } from 'react';
 import { Loader2 } from 'lucide-react';
@@ -12,8 +12,10 @@ export default function HomePage() {
   useEffect(() => {
     if (!loading) {
       if (user) {
+        console.log('HomePage: Usuário autenticado, redirecionando para dashboard');
         router.push('/dashboard');
       } else {
+        console.log('HomePage: Usuário não autenticado, redirecionando para login');
         router.push('/login');
       }
     }

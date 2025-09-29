@@ -3,6 +3,10 @@ import { useState, useEffect } from 'react';
 import { useSearchParams } from 'next/navigation';
 import { SettingsSidebar } from '@/components/settings/SettingsSidebar';
 import { SectionTabs } from '@/components/settings/SectionTabs';
+import { ProtectedLayout } from '@/components/layout/ProtectedLayout';
+import { useAuth } from '@/contexts/AuthContext-enhanced';
+import { supabase, supabaseAdmin } from '@/lib/supabase';
+import { useToastHelpers } from '@/components/ui/toast';
 import { 
   Building2, 
   Users, 
@@ -40,9 +44,67 @@ import {
 
 export default function Page(){
   const searchParams = useSearchParams();
+  const { user } = useAuth();
+  const { success, error, warning, info } = useToastHelpers();
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
   const [activeSection, setActiveSection] = useState('general');
   const [activeTab, setActiveTab] = useState('empresa');
+  const [organizationData, setOrganizationData] = useState<any>(null);
+  const [loading, setLoading] = useState(true);
+  const [showDeleteModal, setShowDeleteModal] = useState(false);
+
+  // Função para formatar CNPJ
+  const formatCNPJ = (cnpj: string) => {
+    if (!cnpj) return '';
+    const numbers = cnpj.replace(/\D/g, '');
+    return numbers.replace(/(\d{2})(\d{3})(\d{3})(\d{4})(\d{2})/, '$1.$2.$3/$4-$5');
+  };
+
+  // Função para formatar CEP
+  const formatCEP = (cep: string) => {
+    if (!cep) return '';
+    const numbers = cep.replace(/\D/g, '');
+    return numbers.replace(/(\d{5})(\d{3})/, '$1-$2');
+  };
+
+  // Função para formatar telefone
+  const formatPhone = (phone: string) => {
+    if (!phone) return '';
+    const numbers = phone.replace(/\D/g, '');
+    if (numbers.length <= 10) {
+      return numbers.replace(/(\d{2})(\d{4})(\d{4})/, '($1) $2-$3');
+    } else {
+      return numbers.replace(/(\d{2})(\d{5})(\d{4})/, '($1) $2-$3');
+    }
+  };
+
+  // Carregar dados da organização
+  useEffect(() => {
+    const loadOrganizationData = async () => {
+      if (!user?.orgId) return;
+      
+      try {
+        setLoading(true);
+        const { data, error } = await supabase
+          .from('organizations')
+          .select('*')
+          .eq('id', user.orgId)
+          .single();
+        
+        if (error) {
+          console.error('Erro ao carregar organização:', error);
+        } else {
+          setOrganizationData(data);
+        }
+      } catch (error) {
+        console.error('Erro ao carregar dados da organização:', error);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    loadOrganizationData();
+  }, [user?.orgId]);
 
   // Definir seção inicial baseada no parâmetro da URL
   useEffect(() => {
@@ -87,6 +149,17 @@ export default function Page(){
       case 'general':
         switch (tabId) {
           case 'empresa':
+            if (loading) {
+              return (
+                <div className="flex items-center justify-center h-64">
+                  <div className="text-center">
+                    <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto mb-4"></div>
+                    <p className="text-muted-foreground">Carregando dados da empresa...</p>
+                  </div>
+                </div>
+              );
+            }
+
             return (
               <div className="space-y-6">
                 <div>
@@ -94,70 +167,510 @@ export default function Page(){
                   <p className="text-muted-foreground mb-6">Configure as informações básicas da sua empresa</p>
                 </div>
                 
+                <form>
+                {/* Dados da Empresa */}
+                <div className="space-y-6">
+                
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                   <div className="space-y-4">
                     <div>
-                      <label className="block text-sm font-medium mb-2">Nome da Empresa</label>
+                        <label className="block text-sm font-medium mb-2">
+                          CNPJ <span className="text-red-500">*</span>
+                        </label>
+                        <div className="flex gap-2">
                       <input 
+                            name="cnpj"
+                            type="text" 
+                            className="flex-1 px-3 py-2 border border-input rounded-lg focus:ring-2 focus:ring-ring focus:border-transparent"
+                            placeholder="00.000.000/0000-00"
+                            defaultValue={formatCNPJ(organizationData?.cnpj || '')}
+                            onInput={(e) => {
+                              let value = e.currentTarget.value.replace(/\D/g, '');
+                              value = value.replace(/^(\d{2})(\d)/, '$1.$2');
+                              value = value.replace(/^(\d{2})\.(\d{3})(\d)/, '$1.$2.$3');
+                              value = value.replace(/\.(\d{3})(\d)/, '.$1/$2');
+                              value = value.replace(/(\d{4})(\d)/, '$1-$2');
+                              e.currentTarget.value = value;
+                            }}
+                            maxLength={18}
+                            required
+                          />
+                          <button
+                            type="button"
+                            onClick={async () => {
+                              const cnpjInput = document.querySelector('input[name="cnpj"]') as HTMLInputElement;
+                              const cnpj = cnpjInput.value.replace(/\D/g, '');
+                              
+                              if (!cnpj || cnpj.length !== 14) {
+                                warning('CNPJ inválido', 'Por favor, digite um CNPJ válido');
+                                return;
+                              }
+                              
+                              try {
+                                const response = await fetch(`https://brasilapi.com.br/api/cnpj/v1/${cnpj}`, {
+                                  headers: {
+                                    'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36'
+                                  }
+                                });
+                                
+                                if (response.ok) {
+                                  const data = await response.json();
+                                  
+                                  // Preencher campos automaticamente
+                                  const nameInput = document.querySelector('input[name="name"]') as HTMLInputElement;
+                                  const fantasyNameInput = document.querySelector('input[name="fantasy_name"]') as HTMLInputElement;
+                                  const emailInput = document.querySelector('input[name="email"]') as HTMLInputElement;
+                                  const phoneInput = document.querySelector('input[name="phone"]') as HTMLInputElement;
+                                  const addressInput = document.querySelector('textarea[name="address"]') as HTMLTextAreaElement;
+                                  const cityInput = document.querySelector('input[name="city"]') as HTMLInputElement;
+                                  const stateInput = document.querySelector('input[name="state"]') as HTMLInputElement;
+                                  const cepInput = document.querySelector('input[name="cep"]') as HTMLInputElement;
+                                  const neighborhoodInput = document.querySelector('input[name="neighborhood"]') as HTMLInputElement;
+                                  const complementInput = document.querySelector('input[name="complement"]') as HTMLInputElement;
+                                  
+                                  if (nameInput) nameInput.value = data.razao_social || '';
+                                  if (fantasyNameInput) fantasyNameInput.value = data.nome_fantasia || data.razao_social || '';
+                                  if (emailInput) emailInput.value = data.email || '';
+                                  if (phoneInput && data.ddd_telefone_1) {
+                                    phoneInput.value = `(${data.ddd_telefone_1.substring(0, 2)}) ${data.ddd_telefone_1.substring(2)}`;
+                                  }
+                                  if (addressInput && data.logradouro) {
+                                    addressInput.value = `${data.descricao_tipo_de_logradouro} ${data.logradouro}, ${data.numero || 'S/N'}`;
+                                  }
+                                  if (cityInput) cityInput.value = data.municipio || '';
+                                  if (stateInput) stateInput.value = data.uf || '';
+                                  if (cepInput) cepInput.value = data.cep || '';
+                                  if (neighborhoodInput) neighborhoodInput.value = data.bairro || '';
+                                  if (complementInput) complementInput.value = data.complemento || '';
+                                  
+                                  success('Dados carregados!', 'Dados da empresa carregados com sucesso');
+                                } else {
+                                  error('CNPJ não encontrado', 'CNPJ não encontrado na base de dados da Receita Federal');
+                                }
+                              } catch (err) {
+                                console.error('Erro ao buscar CNPJ:', err);
+                                error('Erro na busca', 'Erro ao buscar dados do CNPJ. Tente novamente.');
+                              }
+                            }}
+                            className="px-3 py-2 border border-input rounded-lg hover:bg-muted transition-colors flex items-center justify-center"
+                            title="Buscar dados na Receita Federal"
+                          >
+                            <img 
+                              src="/rfb.png" 
+                              alt="RFB" 
+                              className="w-6 h-6"
+                            />
+                          </button>
+                        </div>
+                      </div>
+                      
+                      <div>
+                        <label className="block text-sm font-medium mb-2">
+                          Razão Social <span className="text-red-500">*</span>
+                        </label>
+                        <input 
+                          name="name"
                         type="text" 
                         className="w-full px-3 py-2 border border-input rounded-lg focus:ring-2 focus:ring-ring focus:border-transparent"
-                        placeholder="Digite o nome da empresa"
+                        placeholder="Digite a razão social da empresa"
+                          defaultValue={organizationData?.name || ''}
+                          required
                       />
                     </div>
                     
                     <div>
-                      <label className="block text-sm font-medium mb-2">CNPJ</label>
+                        <label className="block text-sm font-medium mb-2">
+                          Nome Fantasia <span className="text-blue-600 font-medium">*</span>
+                        </label>
                       <input 
+                          name="fantasy_name"
                         type="text" 
-                        className="w-full px-3 py-2 border border-input rounded-lg focus:ring-2 focus:ring-ring focus:border-transparent"
-                        placeholder="00.000.000/0000-00"
-                      />
+                          className="w-full px-3 py-2 border border-input rounded-lg focus:ring-2 focus:ring-ring focus:border-transparent bg-blue-50/50"
+                          placeholder="Digite o nome fantasia (usado na comunicação)"
+                          defaultValue={organizationData?.fantasy_name || ''}
+                          required
+                        />
+                        <p className="text-xs text-muted-foreground mt-1">Este nome será usado em comunicações e documentos</p>
+                      </div>
                     </div>
                     
+                    <div className="space-y-4">
                     <div>
                       <label className="block text-sm font-medium mb-2">Email</label>
                       <input 
+                          name="email"
                         type="email" 
                         className="w-full px-3 py-2 border border-input rounded-lg focus:ring-2 focus:ring-ring focus:border-transparent"
                         placeholder="contato@empresa.com"
+                          defaultValue={user?.email || organizationData?.email || ''}
                       />
-                    </div>
                   </div>
                   
-                  <div className="space-y-4">
                     <div>
                       <label className="block text-sm font-medium mb-2">Telefone</label>
                       <input 
+                          name="phone"
                         type="tel" 
                         className="w-full px-3 py-2 border border-input rounded-lg focus:ring-2 focus:ring-ring focus:border-transparent"
                         placeholder="(11) 99999-9999"
+                          defaultValue={formatPhone(organizationData?.phone || '')}
+                          onInput={(e) => {
+                            let value = e.currentTarget.value.replace(/\D/g, '');
+                            if (value.length <= 10) {
+                              value = value.replace(/^(\d{2})(\d{4})(\d{4})/, '($1) $2-$3');
+                            } else {
+                              value = value.replace(/^(\d{2})(\d{5})(\d{4})/, '($1) $2-$3');
+                            }
+                            e.currentTarget.value = value;
+                          }}
+                          maxLength={15}
                       />
                     </div>
                     
                     <div>
-                      <label className="block text-sm font-medium mb-2">Endereço</label>
-                      <textarea 
+                        <label className="block text-sm font-medium mb-2">Website</label>
+                        <input 
+                          name="website"
+                          type="url" 
                         className="w-full px-3 py-2 border border-input rounded-lg focus:ring-2 focus:ring-ring focus:border-transparent"
-                        rows={3}
-                        placeholder="Digite o endereço completo"
+                          placeholder="https://www.empresa.com.br"
+                          defaultValue={organizationData?.website || ''}
                       />
                     </div>
                     
                     <div>
-                      <label className="block text-sm font-medium mb-2">Logo da Empresa</label>
-                      <div className="border-2 border-dashed border-input rounded-lg p-6 text-center">
-                        <Building2 className="w-8 h-8 mx-auto text-muted-foreground mb-2" />
-                        <p className="text-sm text-muted-foreground">Clique para fazer upload da logo</p>
+                        <label className="block text-sm font-medium mb-1">
+                          Logo da Empresa <span className="text-blue-600 font-medium">*</span>
+                        </label>
+                        <div 
+                          className="border-2 border-dashed border-input rounded-lg p-2 text-center hover:border-primary/50 transition-colors cursor-pointer w-48 h-32 mx-auto"
+                          onClick={() => {
+                            console.log('Settings: Clique no upload da logo detectado');
+                            const input = document.createElement('input');
+                            input.type = 'file';
+                            input.accept = 'image/*';
+                            input.onchange = async (e) => {
+                              console.log('Settings: Arquivo selecionado para upload');
+                              const file = (e.target as HTMLInputElement).files?.[0];
+                              if (file) {
+                                console.log('Settings: Iniciando upload do arquivo:', file.name, 'Tamanho:', file.size);
+                                try {
+                                  // Upload da logo para o Supabase Storage
+                                  // Validar tipo de arquivo
+                                  if (!file.type.startsWith('image/')) {
+                                    error('Arquivo inválido', 'Por favor, selecione apenas imagens');
+                                    return;
+                                  }
+
+                                  // Validar tamanho (máximo 5MB)
+                                  if (file.size > 5 * 1024 * 1024) {
+                                    error('Arquivo muito grande', 'O arquivo deve ter no máximo 5MB');
+                                    return;
+                                  }
+
+                                  const fileExt = file.name.split('.').pop();
+                                  const fileName = `logo-${Date.now()}.${fileExt}`;
+                                  console.log('Settings: Nome do arquivo gerado:', fileName);
+                                  
+                                  try {
+                                    console.log('Settings: Fazendo upload para Supabase Storage...');
+                                    // Fazer upload da imagem usando o cliente admin
+                                    const { data: uploadData, error: uploadError } = await supabaseAdmin.storage
+                                      .from('avatars')
+                                      .upload(fileName, file, {
+                                        cacheControl: '3600',
+                                        upsert: false
+                                      });
+                                    
+                                    if (uploadError) {
+                                      console.error('Settings: Erro ao fazer upload:', uploadError);
+                                      error('Erro no upload', 'Não foi possível fazer upload da imagem');
+                                      return;
+                                    }
+                                    
+                                    console.log('Settings: Upload realizado com sucesso:', uploadData);
+                                    
+                                    // Obter URL pública
+                                    const { data: { publicUrl } } = supabaseAdmin.storage
+                                      .from('avatars')
+                                      .getPublicUrl(fileName);
+                                    
+                                    console.log('Settings: URL pública gerada:', publicUrl);
+                                    
+                                    // Atualizar organização com a nova logo
+                                    console.log('Settings: Atualizando organização com nova logo, orgId:', user?.orgId);
+                                    const { error: updateError } = await supabase
+                                      .from('organizations')
+                                      .update({ logo_url: publicUrl })
+                                      .eq('id', user?.orgId);
+                                    
+                                    if (updateError) {
+                                      console.error('Settings: Erro ao atualizar logo:', updateError);
+                                      error('Erro ao salvar', 'Não foi possível salvar o logo');
+                                    } else {
+                                      console.log('Settings: Logo atualizada com sucesso no banco de dados');
+                                      success('Logo atualizado!', 'Logo da empresa atualizado com sucesso');
+                                      // Atualizar o estado local para mostrar a nova logo
+                                      setOrganizationData((prev: any) => ({ ...prev, logo_url: publicUrl }));
+                                    }
+                                  } catch (uploadError) {
+                                    console.error('Erro no upload:', uploadError);
+                                    error('Erro no upload', 'Ocorreu um erro inesperado');
+                                  }
+                                } catch (processError) {
+                                  console.error('Erro:', processError);
+                                  error('Erro no processamento', 'Erro ao processar logo');
+                                }
+                              }
+                            };
+                            input.click();
+                          }}
+                        >
+                          {organizationData?.logo_url ? (
+                            <div className="relative">
+                              <img 
+                                src={organizationData.logo_url} 
+                                alt="Logo da empresa" 
+                                className="w-40 h-24 mx-auto object-contain rounded-lg"
+                              />
+                              <button
+                                type="button"
+                                onClick={(e) => {
+                                  e.stopPropagation(); // Evitar que abra o seletor de arquivo
+                                  setShowDeleteModal(true);
+                                }}
+                                className="absolute -top-1 -right-1 w-5 h-5 bg-red-500 text-white rounded-full flex items-center justify-center text-xs hover:bg-red-600 transition-colors"
+                              >
+                                ×
+                              </button>
+                            </div>
+                          ) : (
+                            <div className="flex flex-col items-center justify-center h-full">
+                              <Building2 className="w-8 h-8 text-muted-foreground mb-1" />
+                              <p className="text-xs text-muted-foreground">Clique para fazer upload</p>
+                            </div>
+                          )}
+                        </div>
+                        <p className="text-xs text-muted-foreground mt-1">A logo será usada em comunicações e documentos</p>
                       </div>
                     </div>
                   </div>
                 </div>
                 
+                {/* Endereço da Empresa */}
+                <div className="space-y-6 mt-8">
+                  <div className="border-b border-border pb-4">
+                    <h3 className="text-lg font-semibold text-foreground mb-2">Endereço</h3>
+                  </div>
+                  
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <div className="space-y-4">
+                      <div>
+                        <label className="block text-sm font-medium mb-2">CEP</label>
+                        <div className="flex gap-2">
+                          <input 
+                            name="cep"
+                            type="text" 
+                            className="flex-1 px-3 py-2 border border-input rounded-lg focus:ring-2 focus:ring-ring focus:border-transparent"
+                            placeholder="00000-000"
+                            defaultValue={formatCEP(organizationData?.cep || '')}
+                            onInput={(e) => {
+                              let value = e.currentTarget.value.replace(/\D/g, '');
+                              value = value.replace(/^(\d{5})(\d)/, '$1-$2');
+                              e.currentTarget.value = value;
+                            }}
+                            maxLength={9}
+                            onBlur={async (e) => {
+                              const cep = e.currentTarget.value.replace(/\D/g, '');
+                              if (cep.length === 8) {
+                                try {
+                                  const response = await fetch(`https://brasilapi.com.br/api/cep/v1/${cep}`);
+                                  if (response.ok) {
+                                    const data = await response.json();
+                                    
+                                    const streetInput = document.querySelector('input[name="street"]') as HTMLInputElement;
+                                    const neighborhoodInput = document.querySelector('input[name="neighborhood"]') as HTMLInputElement;
+                                    const cityInput = document.querySelector('input[name="city"]') as HTMLInputElement;
+                                    const stateInput = document.querySelector('input[name="state"]') as HTMLInputElement;
+                                    
+                                    if (streetInput) streetInput.value = data.street || '';
+                                    if (neighborhoodInput) neighborhoodInput.value = data.neighborhood || '';
+                                    if (cityInput) cityInput.value = data.city || '';
+                                    if (stateInput) stateInput.value = data.state || '';
+                                  }
+                                } catch (error) {
+                                  console.error('Erro ao buscar CEP:', error);
+                                }
+                              }
+                            }}
+                          />
+                          <button
+                            type="button"
+                            className="px-3 py-2 border border-input rounded-lg hover:bg-muted transition-colors flex items-center justify-center"
+                            title="Buscar CEP"
+                            onClick={async () => {
+                              const cepInput = document.querySelector('input[name="cep"]') as HTMLInputElement;
+                              const cep = cepInput.value.replace(/\D/g, '');
+                              
+                              if (cep.length !== 8) {
+                                warning('CEP inválido', 'Por favor, digite um CEP válido');
+                                return;
+                              }
+                              
+                              try {
+                                const response = await fetch(`https://brasilapi.com.br/api/cep/v1/${cep}`);
+                                if (response.ok) {
+                                  const data = await response.json();
+                                  
+                                  const streetInput = document.querySelector('input[name="street"]') as HTMLInputElement;
+                                  const neighborhoodInput = document.querySelector('input[name="neighborhood"]') as HTMLInputElement;
+                                  const cityInput = document.querySelector('input[name="city"]') as HTMLInputElement;
+                                  const stateInput = document.querySelector('input[name="state"]') as HTMLInputElement;
+                                  
+                                  if (streetInput) streetInput.value = data.street || '';
+                                  if (neighborhoodInput) neighborhoodInput.value = data.neighborhood || '';
+                                  if (cityInput) cityInput.value = data.city || '';
+                                  if (stateInput) stateInput.value = data.state || '';
+                                  
+                                  success('Endereço encontrado!', 'Dados do endereço carregados com sucesso');
+                                } else {
+                                  error('CEP não encontrado', 'CEP não encontrado na base de dados');
+                                }
+                              } catch (error) {
+                                console.error('Erro ao buscar CEP:', error);
+                                error('Erro na busca', 'Erro ao buscar CEP. Tente novamente.');
+                              }
+                            }}
+                          >
+                            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+                            </svg>
+                          </button>
+                        </div>
+                      </div>
+                      
+                      <div>
+                        <label className="block text-sm font-medium mb-2">Logradouro</label>
+                        <input 
+                          name="street"
+                          type="text" 
+                          className="w-full px-3 py-2 border border-input rounded-lg focus:ring-2 focus:ring-ring focus:border-transparent"
+                          placeholder="Rua, Avenida, etc."
+                          defaultValue={organizationData?.street || ''}
+                        />
+                      </div>
+                      
+                      <div>
+                        <label className="block text-sm font-medium mb-2">Número</label>
+                        <input 
+                          name="number"
+                          type="text" 
+                          className="w-full px-3 py-2 border border-input rounded-lg focus:ring-2 focus:ring-ring focus:border-transparent"
+                          placeholder="123"
+                          defaultValue={organizationData?.number || ''}
+                        />
+                      </div>
+                      
+                      <div>
+                        <label className="block text-sm font-medium mb-2">Bairro</label>
+                        <input 
+                          name="neighborhood"
+                          type="text" 
+                          className="w-full px-3 py-2 border border-input rounded-lg focus:ring-2 focus:ring-ring focus:border-transparent"
+                          placeholder="Bairro"
+                          defaultValue={organizationData?.neighborhood || ''}
+                        />
+                      </div>
+                    </div>
+                    
+                    <div className="space-y-4">
+                      <div>
+                        <label className="block text-sm font-medium mb-2">Cidade</label>
+                        <input 
+                          name="city"
+                          type="text" 
+                          className="w-full px-3 py-2 border border-input rounded-lg focus:ring-2 focus:ring-ring focus:border-transparent"
+                          placeholder="Cidade"
+                          defaultValue={organizationData?.city || ''}
+                        />
+                      </div>
+                      
+                      <div>
+                        <label className="block text-sm font-medium mb-2">Estado (UF)</label>
+                        <input 
+                          name="state"
+                          type="text" 
+                          className="w-full px-3 py-2 border border-input rounded-lg focus:ring-2 focus:ring-ring focus:border-transparent"
+                          placeholder="UF"
+                          defaultValue={organizationData?.state || ''}
+                          maxLength={2}
+                        />
+                      </div>
+                      
+                      <div>
+                        <label className="block text-sm font-medium mb-2">Complemento</label>
+                        <input 
+                          name="complement"
+                          type="text" 
+                          className="w-full px-3 py-2 border border-input rounded-lg focus:ring-2 focus:ring-ring focus:border-transparent"
+                          placeholder="Complemento (opcional)"
+                          defaultValue={organizationData?.complement || ''}
+                        />
+                      </div>
+                    </div>
+                  </div>
+                </div>
+                </form>
+                
                 <div className="flex justify-end space-x-3 pt-6 border-t">
                   <button className="px-4 py-2 text-sm border border-input rounded-lg hover:bg-muted transition-colors">
                     Cancelar
                   </button>
-                  <button className="px-4 py-2 text-sm bg-primary text-primary-foreground rounded-lg hover:bg-primary/90 transition-colors">
+                  <button 
+                    onClick={async () => {
+                      console.log('Settings: Botão Salvar Alterações clicado');
+                      try {
+                        const formData = new FormData(document.querySelector('form') || new FormData());
+                        console.log('Settings: FormData coletado:', Object.fromEntries(formData.entries()));
+                        const updateData = {
+                          name: formData.get('name') || organizationData?.name,
+                          fantasy_name: formData.get('fantasy_name') || organizationData?.fantasy_name,
+                          cnpj: formData.get('cnpj') || organizationData?.cnpj,
+                          email: formData.get('email') || user?.email || organizationData?.email,
+                          phone: formData.get('phone') || organizationData?.phone,
+                          website: formData.get('website') || organizationData?.website,
+                          street: formData.get('street') || organizationData?.street,
+                          number: formData.get('number') || organizationData?.number,
+                          city: formData.get('city') || organizationData?.city,
+                          state: formData.get('state') || organizationData?.state,
+                          cep: formData.get('cep') || organizationData?.cep,
+                          neighborhood: formData.get('neighborhood') || organizationData?.neighborhood,
+                          complement: formData.get('complement') || organizationData?.complement
+                        };
+
+                        console.log('Settings: Dados para atualização:', updateData);
+                        console.log('Settings: OrgId do usuário:', user?.orgId);
+
+                        const { error } = await supabase
+                          .from('organizations')
+                          .update(updateData)
+                          .eq('id', user?.orgId);
+
+                        if (error) {
+                          console.error('Settings: Erro ao atualizar organização:', error);
+                          error('Erro ao salvar', 'Não foi possível salvar as alterações');
+                        } else {
+                          console.log('Settings: Organização atualizada com sucesso');
+                          success('Alterações salvas!', 'Dados da empresa atualizados com sucesso');
+                          setTimeout(() => window.location.reload(), 1000);
+                        }
+                      } catch (error) {
+                        console.error('Erro:', error);
+                        error('Erro inesperado', 'Ocorreu um erro ao salvar as alterações');
+                      }
+                    }}
+                    className="px-4 py-2 text-sm bg-primary text-primary-foreground rounded-lg hover:bg-primary/90 transition-colors"
+                  >
                     Salvar Alterações
                   </button>
                 </div>
@@ -1975,6 +2488,7 @@ export default function Page(){
   };
 
   return (
+    <ProtectedLayout>
     <div className="flex h-full">
       <SettingsSidebar 
         isCollapsed={isSidebarCollapsed} 
@@ -1999,7 +2513,63 @@ export default function Page(){
             {getTabContent(activeSection, activeTab)}
           </div>
         </div>
+        </div>
       </div>
-    </div>
+
+      {/* Modal de confirmação para excluir logo */}
+      {showDeleteModal && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
+          <div className="bg-white rounded-lg p-6 max-w-md w-full mx-4">
+            <div className="flex items-center mb-4">
+              <div className="w-10 h-10 bg-red-100 rounded-full flex items-center justify-center mr-3">
+                <svg className="w-5 h-5 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.732-.833-2.5 0L4.268 19.5c-.77.833.192 2.5 1.732 2.5z" />
+                </svg>
+              </div>
+              <h3 className="text-lg font-semibold text-gray-900">Excluir Logo</h3>
+            </div>
+            
+            <p className="text-gray-600 mb-6">
+              Tem certeza que deseja excluir a logo da empresa? Esta ação não pode ser desfeita.
+            </p>
+            
+            <div className="flex justify-end space-x-3">
+              <button
+                onClick={() => setShowDeleteModal(false)}
+                className="px-4 py-2 text-sm font-medium text-gray-700 bg-gray-100 rounded-lg hover:bg-gray-200 transition-colors"
+              >
+                Cancelar
+              </button>
+              <button
+                onClick={async () => {
+                  try {
+                    const { error } = await supabase
+                      .from('organizations')
+                      .update({ logo_url: null })
+                      .eq('id', user?.orgId);
+                    
+                    if (error) {
+                      console.error('Erro ao remover logo:', error);
+                      error('Erro ao remover', 'Não foi possível remover a logo');
+                    } else {
+                      success('Logo removida!', 'Logo da empresa removida com sucesso');
+                      setOrganizationData(prev => ({ ...prev, logo_url: null }));
+                    }
+                  } catch (err) {
+                    console.error('Erro:', err);
+                    error('Erro inesperado', 'Erro ao remover logo');
+                  } finally {
+                    setShowDeleteModal(false);
+                  }
+                }}
+                className="px-4 py-2 text-sm font-medium text-white bg-red-600 rounded-lg hover:bg-red-700 transition-colors"
+              >
+                Excluir
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+    </ProtectedLayout>
   );
 }

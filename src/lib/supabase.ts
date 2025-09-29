@@ -7,6 +7,13 @@ declare global {
   var __supabaseAdmin: SupabaseClient | undefined;
 }
 
+// Verificar se já existe uma instância global
+if (typeof window !== 'undefined' && global.__supabase) {
+  console.warn('Múltiplas instâncias do Supabase detectadas. Usando instância existente.');
+}
+
+// Não limpar localStorage automaticamente para manter a sessão
+
 // Função para criar o cliente Supabase do lado do cliente
 function createSupabaseClient(): SupabaseClient {
   return createClient(
@@ -18,7 +25,14 @@ function createSupabaseClient(): SupabaseClient {
         autoRefreshToken: true,
         detectSessionInUrl: true,
         storage: typeof window !== 'undefined' ? window.localStorage : undefined,
+        flowType: 'pkce',
+        storageKey: 'cortus-erp-auth'
       },
+      global: {
+        headers: {
+          'X-Client-Info': 'cortus-erp-client'
+        }
+      }
     }
   );
 }
@@ -31,7 +45,14 @@ function createSupabaseAdminClient(): SupabaseClient {
     {
       auth: {
         autoRefreshToken: false,
-        persistSession: false
+        persistSession: false,
+        storageKey: 'cortus-erp-admin',
+        flowType: 'implicit'
+      },
+      global: {
+        headers: {
+          'X-Client-Info': 'cortus-erp-admin'
+        }
       }
     }
   );
@@ -42,7 +63,10 @@ export const supabase = (() => {
   // Usar singleton global para evitar múltiplas instâncias
   if (typeof window !== 'undefined') {
     if (!global.__supabase) {
+      console.log('Criando nova instância do Supabase client');
       global.__supabase = createSupabaseClient();
+    } else {
+      console.log('Reutilizando instância existente do Supabase client');
     }
     return global.__supabase;
   }
@@ -54,7 +78,10 @@ export const supabase = (() => {
 // Cliente Supabase para operações administrativas (server-side)
 export const supabaseAdmin = (() => {
   if (!global.__supabaseAdmin) {
+    console.log('Criando nova instância do Supabase admin client');
     global.__supabaseAdmin = createSupabaseAdminClient();
+  } else {
+    console.log('Reutilizando instância existente do Supabase admin client');
   }
   return global.__supabaseAdmin;
 })();

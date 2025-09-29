@@ -114,12 +114,12 @@ export default function MovimentacaoPage() {
     }, 1000);
   }, []);
 
-  const handleSaveTransaction = (transactionData: Transaction) => {
+  const handleSaveTransaction = (transactionData: Omit<Transaction, 'id' | 'created_at' | 'updated_at'>) => {
     if (editingTransaction) {
       // Atualizar transação existente
       setTransactions(prev => prev.map(transaction => 
         transaction.id === editingTransaction.id 
-          ? { ...transactionData, id: editingTransaction.id, updated_at: new Date().toISOString() }
+          ? { ...transactionData, id: editingTransaction.id, created_at: transaction.created_at, updated_at: new Date().toISOString() }
           : transaction
       ));
     } else {
@@ -350,7 +350,8 @@ export default function MovimentacaoPage() {
           </button>
           <button
             onClick={() => {
-              const expenseTransaction = {
+              const expenseTransaction: Transaction = {
+                id: '',
                 type: 'expense' as const,
                 category: '',
                 description: '',
@@ -360,7 +361,9 @@ export default function MovimentacaoPage() {
                 status: 'completed' as const,
                 reference: '',
                 notes: '',
-                tags: []
+                tags: [],
+                created_at: new Date().toISOString(),
+                updated_at: new Date().toISOString()
               };
               setEditingTransaction(expenseTransaction);
               setShowForm(true);

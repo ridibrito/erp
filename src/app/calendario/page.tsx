@@ -1,6 +1,7 @@
 "use client";
 import { useState, useEffect } from 'react';
 import { Calendar, Plus, ChevronLeft, ChevronRight, Clock, User, Tag } from 'lucide-react';
+import { ProtectedLayout } from '@/components/layout/ProtectedLayout';
 
 interface Task {
   id: string;
@@ -166,7 +167,8 @@ export default function CalendarPage() {
   const monthName = currentDate.toLocaleDateString('pt-BR', { month: 'long', year: 'numeric' });
 
   return (
-    <div className="p-6 space-y-6">
+    <ProtectedLayout>
+      <div className="space-y-6">
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
@@ -396,6 +398,7 @@ export default function CalendarPage() {
           </div>
         </div>
       )}
-    </div>
+      </div>
+    </ProtectedLayout>
   );
 }

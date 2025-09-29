@@ -13,14 +13,14 @@ const NAV = [
     label: 'Dashboard',
     href: '/dashboard',
     icon: LayoutDashboard,
-    scopes: ['dashboard:view']
+    scopes: ['dashboard.view']
   },
 
   {
     label: 'Gestão de Negócios',
     href: '/crm',
     icon: Briefcase,
-    scopes: ['crm:read'],
+    scopes: ['crm.clients.view', 'crm.leads.view'],
     submenu: [
       { label: 'Clientes', href: '/crm/clientes', icon: Users },
       { label: 'Negócios', href: '/crm/negocios', icon: Briefcase },
@@ -32,8 +32,10 @@ const NAV = [
     label: 'Financeiro',
     href: '/financeiro',
     icon: CreditCard,
-    scopes: ['finance:read'],
+    scopes: ['finance.invoices.view'],
     submenu: [
+      { label: 'Cobranças', href: '/financeiro/cobrancas', icon: CreditCard },
+      { label: 'NFS-e', href: '/financeiro/nfse', icon: FileText },
       { label: 'Contas a Pagar', href: '/financeiro/pagar', icon: TrendingDown },
       { label: 'Contas a Receber', href: '/financeiro/receber', icon: TrendingUp },
       { label: 'Movimentação', href: '/financeiro/movimentacao', icon: BarChart3 },
@@ -44,13 +46,13 @@ const NAV = [
     label: 'Projetos',
     href: '/projetos',
     icon: FolderOpen,
-    scopes: ['projects:read']
+    scopes: ['projects.view']
   },
   {
     label: 'Relatórios',
     href: '/relatorios',
     icon: BarChart3,
-    scopes: ['reports:view'],
+    scopes: ['reports.view'],
     submenu: [
       { label: 'DRE', href: '/relatorios/dre', icon: PieChart },
       { label: 'Outros relatórios', href: '/relatorios/outros', icon: Activity },
@@ -61,6 +63,9 @@ const NAV = [
 export function Sidebar({ scopes }: { scopes: string[] }) {
   const pathname = usePathname();
   const [expandedMenus, setExpandedMenus] = useState<Set<string>>(new Set());
+
+  console.log('Sidebar: scopes recebidos:', scopes);
+  console.log('Sidebar: NAV items:', NAV.length);
 
   const toggleMenu = (label: string) => {
     const newExpanded = new Set(expandedMenus);
@@ -97,7 +102,11 @@ export function Sidebar({ scopes }: { scopes: string[] }) {
       </div>
 
       <nav className="flex-1 p-4 space-y-1 overflow-y-auto">
-        {NAV.filter((i) => can(scopes, [...i.scopes])).map((item) => {
+        {NAV.filter((i) => {
+          const hasPermission = can(scopes, [...i.scopes]);
+          console.log(`Sidebar: ${i.label} - scopes: ${i.scopes.join(', ')} - hasPermission: ${hasPermission}`);
+          return hasPermission;
+        }).map((item) => {
           const active = pathname.startsWith(item.href);
           const hasSubmenu = 'submenu' in item && item.submenu && item.submenu.length > 0;
           const isExpanded = expandedMenus.has(item.label);

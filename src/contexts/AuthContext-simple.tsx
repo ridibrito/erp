@@ -38,9 +38,29 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
             email: currentSession.user.email || '',
             name: currentSession.user.user_metadata?.name || 'Usuário',
             role: 'user',
-            orgId: 'default-org',
-            permissions: ['dashboard:view', 'user:read', 'crm:read', 'finance:read', 'projects:read', 'reports:view'],
-            scopes: ['dashboard', 'profile']
+            orgId: '00000000-0000-0000-0000-000000000001',
+            permissions: [
+              'dashboard:view', 
+              'user:read', 
+              'crm:read', 
+              'crm.leads.view',
+              'crm.clients.view',
+              'crm.clients.create',
+              'crm.clients.edit',
+              'crm.clients.delete',
+              'finance:read',
+              'finance.invoices.view',
+              'finance.invoices.create',
+              'finance.invoices.edit',
+              'projects:read',
+              'projects.view',
+              'projects.create',
+              'projects.edit',
+              'reports:view',
+              'reports.view',
+              'reports.export'
+            ],
+            scopes: ['dashboard', 'profile', 'crm', 'finance', 'projects', 'reports']
           };
 
           const session: Session = {
@@ -71,9 +91,29 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           email: supabaseSession.user.email || '',
           name: supabaseSession.user.user_metadata?.name || 'Usuário',
           role: 'user',
-          orgId: 'default-org',
-          permissions: ['dashboard:view', 'user:read', 'crm:read', 'finance:read', 'projects:read', 'reports:view'],
-          scopes: ['dashboard', 'profile']
+          orgId: '00000000-0000-0000-0000-000000000001',
+          permissions: [
+            'dashboard:view', 
+            'user:read', 
+            'crm:read', 
+            'crm.leads.view',
+            'crm.clients.view',
+            'crm.clients.create',
+            'crm.clients.edit',
+            'crm.clients.delete',
+            'finance:read',
+            'finance.invoices.view',
+            'finance.invoices.create',
+            'finance.invoices.edit',
+            'projects:read',
+            'projects.view',
+            'projects.create',
+            'projects.edit',
+            'reports:view',
+            'reports.view',
+            'reports.export'
+          ],
+          scopes: ['dashboard', 'profile', 'crm', 'finance', 'projects', 'reports']
         };
 
         const session: Session = {
@@ -171,8 +211,45 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
     try {
       const { data: { session } } = await supabase.auth.refreshSession();
-      if (session) {
-        await handleAuthChange(session);
+      if (session?.user) {
+        const user: User = {
+          id: session.user.id,
+          email: session.user.email || '',
+          name: session.user.user_metadata?.name || 'Usuário',
+          role: 'user',
+          orgId: '00000000-0000-0000-0000-000000000001',
+          permissions: [
+            'dashboard:view', 
+            'user:read', 
+            'crm:read', 
+            'crm.leads.view',
+            'crm.clients.view',
+            'crm.clients.create',
+            'crm.clients.edit',
+            'crm.clients.delete',
+            'finance:read',
+            'finance.invoices.view',
+            'finance.invoices.create',
+            'finance.invoices.edit',
+            'projects:read',
+            'projects.view',
+            'projects.create',
+            'projects.edit',
+            'reports:view',
+            'reports.view',
+            'reports.export'
+          ],
+          scopes: ['dashboard', 'profile', 'crm', 'finance', 'projects', 'reports']
+        };
+
+        const sessionData: Session = {
+          user,
+          token: session.access_token,
+          expiresAt: new Date(session.expires_at! * 1000)
+        };
+
+        setUser(user);
+        setSession(sessionData);
       }
     } catch (error) {
       console.error('Erro ao renovar sessão:', error);

@@ -1,294 +1,300 @@
-import { redirect } from 'next/navigation';
-import { getCurrentMember } from '@/lib/session';
+'use client';
+
+import { ProtectedLayout } from '@/components/layout/ProtectedLayout';
+import { useAuth } from '@/contexts/AuthContext-enhanced';
 import { can } from '@/lib/authz';
-import { RequireScope } from '@/components/auth/RequireScope';
-import { Plus, Search, Filter, MoreHorizontal, FolderOpen, Calendar, Users, Target, Clock, CheckCircle, AlertCircle, Pause } from 'lucide-react';
+import { 
+  Plus, 
+  Filter, 
+  Search, 
+  Download,
+  MoreVertical,
+  Eye,
+  Edit,
+  Trash2,
+  Calendar,
+  User,
+  Clock,
+  CheckCircle,
+  AlertCircle
+} from 'lucide-react';
 
-export default async function ProjetosPage() {
-  const m = await getCurrentMember();
-  if (!m || !can(m.scopes, 'projects:read')) redirect('/403');
+export default function ProjetosPage() {
+  const { user } = useAuth();
 
-  // Mock data
-  const projetos = [
+  if (!user) {
+    return null;
+  }
+
+  const permissions = user.permissions || [];
+
+  if (!can(permissions, 'projects:read')) {
+    return (
+      <ProtectedLayout>
+        <div className="p-6">
+          <div className="text-center">
+            <h2 className="text-2xl font-bold text-gray-900 mb-2">Acesso Negado</h2>
+            <p className="text-gray-600">Você não tem permissão para acessar esta página.</p>
+          </div>
+        </div>
+      </ProtectedLayout>
+    );
+  }
+
+  // Dados mock para demonstração
+  const projects = [
     {
-      id: 1,
-      titulo: 'Implementação ERP Nexus',
-      cliente: 'TechCorp Ltda',
-      status: 'em_andamento',
-      progresso: 75,
-      dataInicio: '2024-01-01',
-      dataFim: '2024-03-31',
-      responsavel: 'João Silva',
-      equipe: 5,
-      orcamento: 150000
+      id: '1',
+      name: 'Sistema de Gestão ERP',
+      client: 'Empresa ABC Ltda',
+      status: 'active',
+      progress: 75,
+      startDate: '2024-01-15',
+      endDate: '2024-03-15',
+      budget: 50000.00,
+      spent: 37500.00,
+      team: ['João Silva', 'Maria Santos', 'Pedro Costa']
     },
     {
-      id: 2,
-      titulo: 'Desenvolvimento App Mobile',
-      cliente: 'StartupXYZ',
-      status: 'concluido',
-      progresso: 100,
-      dataInicio: '2023-10-01',
-      dataFim: '2023-12-31',
-      responsavel: 'Maria Santos',
-      equipe: 3,
-      orcamento: 85000
+      id: '2',
+      name: 'Website Corporativo',
+      client: 'João Silva',
+      status: 'completed',
+      progress: 100,
+      startDate: '2024-01-01',
+      endDate: '2024-02-01',
+      budget: 15000.00,
+      spent: 15000.00,
+      team: ['Ana Lima', 'Carlos Oliveira']
     },
     {
-      id: 3,
-      titulo: 'Consultoria Marketing Digital',
-      cliente: 'InnovationLab',
-      status: 'pausado',
-      progresso: 45,
-      dataInicio: '2024-01-15',
-      dataFim: '2024-04-15',
-      responsavel: 'Carlos Oliveira',
-      equipe: 2,
-      orcamento: 45000
-    },
-    {
-      id: 4,
-      titulo: 'Migração de Dados',
-      cliente: 'DataFlow Solutions',
-      status: 'planejamento',
-      progresso: 10,
-      dataInicio: '2024-02-01',
-      dataFim: '2024-05-31',
-      responsavel: 'Ana Costa',
-      equipe: 4,
-      orcamento: 65000
+      id: '3',
+      name: 'App Mobile',
+      client: 'Maria Santos',
+      status: 'planning',
+      progress: 25,
+      startDate: '2024-02-01',
+      endDate: '2024-05-01',
+      budget: 80000.00,
+      spent: 20000.00,
+      team: ['Pedro Costa', 'Ana Lima', 'João Silva']
     }
   ];
 
-  const stats = [
-    { label: 'Projetos Ativos', value: '8', change: '+2', icon: Target },
-    { label: 'Concluídos (Mês)', value: '3', change: '+1', icon: CheckCircle },
-    { label: 'Em Atraso', value: '2', change: '-1', icon: AlertCircle },
-    { label: 'Valor Total', value: 'R$ 1.2M', change: '+15%', icon: FolderOpen }
-  ];
+  const getStatusColor = (status: string) => {
+    switch (status) {
+      case 'completed':
+        return 'bg-green-100 text-green-800';
+      case 'active':
+        return 'bg-blue-100 text-blue-800';
+      case 'planning':
+        return 'bg-yellow-100 text-yellow-800';
+      case 'on-hold':
+        return 'bg-red-100 text-red-800';
+      default:
+        return 'bg-gray-100 text-gray-800';
+    }
+  };
 
-  const getStatusBadge = (status: string) => {
-    const statusConfig = {
-      planejamento: { label: 'Planejamento', class: 'bg-blue-100 text-blue-800' },
-      em_andamento: { label: 'Em Andamento', class: 'bg-green-100 text-green-800' },
-      pausado: { label: 'Pausado', class: 'bg-yellow-100 text-yellow-800' },
-      concluido: { label: 'Concluído', class: 'bg-gray-100 text-gray-800' },
-      cancelado: { label: 'Cancelado', class: 'bg-red-100 text-red-800' }
-    };
-    const config = statusConfig[status as keyof typeof statusConfig];
-    return (
-      <span className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${config.class}`}>
-        {config.label}
-      </span>
-    );
+  const getStatusText = (status: string) => {
+    switch (status) {
+      case 'completed':
+        return 'Concluído';
+      case 'active':
+        return 'Ativo';
+      case 'planning':
+        return 'Planejamento';
+      case 'on-hold':
+        return 'Pausado';
+      default:
+        return status;
+    }
   };
 
   const getStatusIcon = (status: string) => {
-    const iconMap = {
-      planejamento: Clock,
-      em_andamento: Target,
-      pausado: Pause,
-      concluido: CheckCircle,
-      cancelado: AlertCircle
-    };
-    const Icon = iconMap[status as keyof typeof iconMap] || Target;
-    return <Icon className="w-4 h-4" />;
+    switch (status) {
+      case 'completed':
+        return <CheckCircle className="h-4 w-4" />;
+      case 'active':
+        return <Clock className="h-4 w-4" />;
+      case 'planning':
+        return <AlertCircle className="h-4 w-4" />;
+      default:
+        return <Clock className="h-4 w-4" />;
+    }
+  };
+
+  const formatCurrency = (value: number) => {
+    return new Intl.NumberFormat('pt-BR', {
+      style: 'currency',
+      currency: 'BRL'
+    }).format(value);
+  };
+
+  const formatDate = (dateString: string) => {
+    return new Date(dateString).toLocaleDateString('pt-BR');
   };
 
   return (
-    <div className="space-y-6">
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-2xl font-bold">Projetos</h1>
-          <p className="text-muted-foreground">Gerencie todos os projetos da empresa</p>
-        </div>
-        <RequireScope scopes={m.scopes} need="projects:write">
-          <button className="inline-flex items-center px-4 py-2 bg-primary text-primary-foreground rounded-md hover:bg-primary/90 transition-colors">
-            <Plus className="w-4 h-4 mr-2" />
-            Novo Projeto
-          </button>
-        </RequireScope>
-      </div>
-
-      {/* Stats Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-        {stats.map((stat, index) => {
-          const Icon = stat.icon;
-          return (
-            <div key={index} className="bg-card border rounded-lg p-4">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-sm text-muted-foreground">{stat.label}</p>
-                  <p className="text-2xl font-bold">{stat.value}</p>
-                </div>
-                <Icon className="w-8 h-8 text-primary/20" />
-              </div>
-              <p className="text-xs text-green-600 mt-1">{stat.change}</p>
-            </div>
-          );
-        })}
-      </div>
-
-      {/* Filters and Search */}
-      <div className="flex flex-col sm:flex-row gap-4">
-        <div className="relative flex-1">
-          <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground w-4 h-4" />
-          <input
-            type="text"
-            placeholder="Buscar projetos..."
-            className="w-full pl-10 pr-4 py-2 border rounded-md bg-background"
-          />
-        </div>
-        <select className="px-4 py-2 border rounded-md bg-background">
-          <option value="">Todos os status</option>
-          <option value="planejamento">Planejamento</option>
-          <option value="em_andamento">Em Andamento</option>
-          <option value="pausado">Pausado</option>
-          <option value="concluido">Concluído</option>
-          <option value="cancelado">Cancelado</option>
-        </select>
-        <button className="inline-flex items-center px-4 py-2 border rounded-md hover:bg-muted transition-colors">
-          <Filter className="w-4 h-4 mr-2" />
-          Filtros
-        </button>
-      </div>
-
-      {/* Projetos Grid */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-        {projetos.map((projeto) => (
-          <div key={projeto.id} className="bg-card border rounded-lg p-6 hover:shadow-md transition-shadow">
-            <div className="flex items-start justify-between mb-4">
-              <div className="flex items-center">
-                {getStatusIcon(projeto.status)}
-                <span className="ml-2 text-sm text-muted-foreground">#{projeto.id}</span>
-              </div>
-              {getStatusBadge(projeto.status)}
-            </div>
-            
-            <h3 className="font-semibold text-lg mb-2">{projeto.titulo}</h3>
-            <p className="text-sm text-muted-foreground mb-4">{projeto.cliente}</p>
-            
-            {/* Progress Bar */}
-            <div className="mb-4">
-              <div className="flex justify-between text-sm mb-1">
-                <span>Progresso</span>
-                <span>{projeto.progresso}%</span>
-              </div>
-              <div className="w-full bg-muted rounded-full h-2">
-                <div 
-                  className="bg-primary h-2 rounded-full transition-all duration-300" 
-                  style={{ width: `${projeto.progresso}%` }}
-                ></div>
-              </div>
-            </div>
-            
-            {/* Project Details */}
-            <div className="space-y-2 mb-4">
-              <div className="flex items-center text-sm">
-                <Calendar className="w-4 h-4 mr-2 text-muted-foreground" />
-                <span>{projeto.dataInicio} - {projeto.dataFim}</span>
-              </div>
-              <div className="flex items-center text-sm">
-                <Users className="w-4 h-4 mr-2 text-muted-foreground" />
-                <span>{projeto.equipe} membros</span>
-              </div>
-              <div className="flex items-center text-sm">
-                <Target className="w-4 h-4 mr-2 text-muted-foreground" />
-                <span>{projeto.responsavel}</span>
-              </div>
-            </div>
-            
-            {/* Budget */}
-            <div className="flex items-center justify-between mb-4">
-              <span className="text-sm text-muted-foreground">Orçamento</span>
-              <span className="font-medium">
-                {new Intl.NumberFormat('pt-BR', {
-                  style: 'currency',
-                  currency: 'BRL'
-                }).format(projeto.orcamento)}
-              </span>
-            </div>
-            
-            {/* Actions */}
-            <div className="flex space-x-2">
-              <button className="flex-1 px-3 py-2 text-sm border rounded-md hover:bg-muted transition-colors">
-                Ver Detalhes
-              </button>
-              <button className="p-2 border rounded-md hover:bg-muted transition-colors">
-                <MoreHorizontal className="w-4 h-4" />
-              </button>
-            </div>
+    <ProtectedLayout>
+      <div className="p-6">
+        <div className="flex items-center justify-between mb-6">
+          <div>
+            <h1 className="text-3xl font-bold text-gray-900">Projetos</h1>
+            <p className="text-gray-600 mt-1">Gerencie seus projetos e equipes</p>
           </div>
-        ))}
-      </div>
+          <div className="flex space-x-3">
+            {can(permissions, 'projects:write') && (
+              <button className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 flex items-center space-x-2">
+                <Plus className="h-5 w-5" />
+                <span>Novo Projeto</span>
+              </button>
+            )}
+            <button className="px-4 py-2 bg-gray-200 text-gray-700 rounded-md hover:bg-gray-300 focus:outline-none focus:ring-2 focus:ring-gray-500 flex items-center space-x-2">
+              <Download className="h-5 w-5" />
+              <span>Exportar</span>
+            </button>
+          </div>
+        </div>
 
-      {/* Projetos Table (Alternative View) */}
-      <div className="bg-card border rounded-lg">
-        <div className="p-4 border-b">
-          <h3 className="font-semibold">Lista de Projetos</h3>
+        {/* Filtros */}
+        <div className="bg-white p-4 rounded-lg shadow-sm border border-gray-200 mb-6">
+          <div className="flex flex-wrap items-center gap-4">
+            <div className="flex-1 min-w-64">
+              <div className="relative">
+                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4" />
+                <input
+                  type="text"
+                  placeholder="Buscar por nome do projeto ou cliente..."
+                  className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                />
+              </div>
+            </div>
+            <select className="px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500">
+              <option value="">Todos os status</option>
+              <option value="planning">Planejamento</option>
+              <option value="active">Ativo</option>
+              <option value="completed">Concluído</option>
+              <option value="on-hold">Pausado</option>
+            </select>
+            <button className="px-4 py-2 bg-gray-100 text-gray-700 rounded-md hover:bg-gray-200 focus:outline-none focus:ring-2 focus:ring-gray-500 flex items-center space-x-2">
+              <Filter className="h-4 w-4" />
+              <span>Filtros</span>
+            </button>
+          </div>
         </div>
-        <div className="overflow-x-auto">
-          <table className="w-full">
-            <thead className="bg-muted/50">
-              <tr>
-                <th className="text-left p-4 font-medium">Projeto</th>
-                <th className="text-left p-4 font-medium">Cliente</th>
-                <th className="text-left p-4 font-medium">Status</th>
-                <th className="text-left p-4 font-medium">Progresso</th>
-                <th className="text-left p-4 font-medium">Responsável</th>
-                <th className="text-left p-4 font-medium">Orçamento</th>
-                <th className="text-left p-4 font-medium">Ações</th>
-              </tr>
-            </thead>
-            <tbody>
-              {projetos.map((projeto) => (
-                <tr key={projeto.id} className="border-t hover:bg-muted/30">
-                  <td className="p-4">
-                    <div>
-                      <p className="font-medium">{projeto.titulo}</p>
-                      <p className="text-sm text-muted-foreground">#{projeto.id}</p>
-                    </div>
-                  </td>
-                  <td className="p-4">{projeto.cliente}</td>
-                  <td className="p-4">
-                    {getStatusBadge(projeto.status)}
-                  </td>
-                  <td className="p-4">
-                    <div className="flex items-center">
-                      <div className="w-20 bg-muted rounded-full h-2 mr-2">
-                        <div 
-                          className="bg-primary h-2 rounded-full" 
-                          style={{ width: `${projeto.progresso}%` }}
-                        ></div>
-                      </div>
-                      <span className="text-sm">{projeto.progresso}%</span>
-                    </div>
-                  </td>
-                  <td className="p-4">
-                    <div className="flex items-center">
-                      <Users className="w-4 h-4 mr-2 text-muted-foreground" />
-                      {projeto.responsavel}
-                    </div>
-                  </td>
-                  <td className="p-4">
-                    <span className="font-medium">
-                      {new Intl.NumberFormat('pt-BR', {
-                        style: 'currency',
-                        currency: 'BRL'
-                      }).format(projeto.orcamento)}
-                    </span>
-                  </td>
-                  <td className="p-4">
-                    <button className="p-1 hover:bg-muted rounded">
-                      <MoreHorizontal className="w-4 h-4" />
-                    </button>
-                  </td>
+
+        {/* Tabela */}
+        <div className="bg-white shadow-sm rounded-lg border border-gray-200">
+          <div className="overflow-x-auto">
+            <table className="min-w-full divide-y divide-gray-200">
+              <thead className="bg-gray-50">
+                <tr>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    Projeto
+                  </th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    Cliente
+                  </th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    Status
+                  </th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    Progresso
+                  </th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    Orçamento
+                  </th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    Prazo
+                  </th>
+                  <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    Ações
+                  </th>
                 </tr>
-              ))}
-            </tbody>
-          </table>
+              </thead>
+              <tbody className="bg-white divide-y divide-gray-200">
+                {projects.map((project) => (
+                  <tr key={project.id} className="hover:bg-gray-50">
+                    <td className="px-6 py-4 whitespace-nowrap">
+                      <div className="flex items-center">
+                        <div className="flex-shrink-0 h-10 w-10">
+                          <div className="h-10 w-10 rounded-full bg-blue-100 flex items-center justify-center">
+                            <Calendar className="h-5 w-5 text-blue-600" />
+                          </div>
+                        </div>
+                        <div className="ml-4">
+                          <div className="text-sm font-medium text-gray-900">
+                            {project.name}
+                          </div>
+                          <div className="text-sm text-gray-500">
+                            {project.team.length} membros
+                          </div>
+                        </div>
+                      </div>
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap">
+                      <div className="text-sm text-gray-900">{project.client}</div>
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap">
+                      <span className={`inline-flex items-center px-2 py-1 text-xs font-semibold rounded-full ${getStatusColor(project.status)}`}>
+                        {getStatusIcon(project.status)}
+                        <span className="ml-1">{getStatusText(project.status)}</span>
+                      </span>
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap">
+                      <div className="flex items-center">
+                        <div className="flex-1 bg-gray-200 rounded-full h-2 mr-2">
+                          <div 
+                            className="bg-blue-600 h-2 rounded-full" 
+                            style={{ width: `${project.progress}%` }}
+                          ></div>
+                        </div>
+                        <span className="text-sm text-gray-600">{project.progress}%</span>
+                      </div>
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap">
+                      <div className="text-sm text-gray-900">
+                        {formatCurrency(project.budget)}
+                      </div>
+                      <div className="text-sm text-gray-500">
+                        Gasto: {formatCurrency(project.spent)}
+                      </div>
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap">
+                      <div className="text-sm text-gray-900">
+                        {formatDate(project.endDate)}
+                      </div>
+                      <div className="text-sm text-gray-500">
+                        Início: {formatDate(project.startDate)}
+                      </div>
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
+                      <div className="flex items-center justify-end space-x-2">
+                        {can(permissions, 'projects:read') && (
+                          <button className="p-2 text-muted-foreground hover:text-blue-500 transition-colors">
+                            <Eye className="w-4 h-4" />
+                          </button>
+                        )}
+                        {can(permissions, 'projects:write') && (
+                          <button className="p-2 text-muted-foreground hover:text-green-500 transition-colors">
+                            <Edit className="w-4 h-4" />
+                          </button>
+                        )}
+                        {can(permissions, 'projects:write') && (
+                          <button className="p-2 text-muted-foreground hover:text-red-500 transition-colors">
+                            <Trash2 className="w-4 h-4" />
+                          </button>
+                        )}
+                      </div>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
         </div>
       </div>
-    </div>
+    </ProtectedLayout>
   );
 }

@@ -88,7 +88,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
             email: supabaseSession.user.email,
             name: supabaseSession.user.user_metadata?.name || 'Usuário',
             role: 'user',
-            org_id: 'default-org', // TODO: Implementar multi-tenancy
+            org_id: '00000000-0000-0000-0000-000000000001', // UUID padrão para desenvolvimento
             created_at: new Date().toISOString(),
             updated_at: new Date().toISOString()
           });
@@ -105,7 +105,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         email: supabaseSession.user.email || '',
         name: userData?.name || supabaseSession.user.user_metadata?.name || 'Usuário',
         role: userData?.role || 'user',
-        orgId: userData?.org_id || 'default-org',
+        orgId: userData?.org_id || '00000000-0000-0000-0000-000000000001',
         permissions: userData?.permissions || ['dashboard.view'],
         scopes: userData?.scopes || ['user']
       };

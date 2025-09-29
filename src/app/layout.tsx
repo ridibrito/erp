@@ -1,8 +1,8 @@
 import './globals.css';
-import { AuthProvider } from '@/contexts/AuthContext-simple';
+import { AuthProvider } from '@/contexts/AuthContext-enhanced';
 import { NotificationProvider } from '@/components/ui/Notifications';
+import { ToastProvider } from '@/components/ui/toast';
 import { NoSSR } from '@/components/ui/NoSSR';
-import { suppressHydrationWarning } from 'react';
 
 export const metadata = {
   title: 'Cortus ERP',
@@ -37,9 +37,11 @@ export default function RootLayout({
           </div>
         }>
           <AuthProvider>
-            <NotificationProvider>
-              {children}
-            </NotificationProvider>
+            <ToastProvider>
+              <NotificationProvider>
+                {children}
+              </NotificationProvider>
+            </ToastProvider>
           </AuthProvider>
         </NoSSR>
       </body>

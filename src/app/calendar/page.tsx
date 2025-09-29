@@ -13,6 +13,7 @@ import {
   AlertCircle
 } from 'lucide-react';
 import { VCalendarEvent } from '@/types/database';
+import { ProtectedLayout } from '@/components/layout/ProtectedLayout';
 
 type ViewMode = 'month' | 'week' | 'day';
 
@@ -306,7 +307,7 @@ export default function CalendarPage() {
   };
 
   return (
-    <div className="p-6">
+    <ProtectedLayout>
       <div className="max-w-7xl mx-auto">
         {/* Header */}
         <div className="flex items-center justify-between mb-6">
@@ -470,6 +471,6 @@ export default function CalendarPage() {
           </div>
         )}
       </div>
-    </div>
+    </ProtectedLayout>
   );
 }

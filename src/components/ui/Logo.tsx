@@ -3,7 +3,7 @@ import { cn } from '@/lib/utils';
 
 interface LogoProps {
   className?: string;
-  size?: 'md' | 'lg' | 'custom';
+  size?: 'sm' | 'md' | 'lg' | 'xl' | 'xxl' | 'custom';
   showText?: boolean;
   variant?: 'default' | 'white' | 'dark';
   width?: number;
@@ -11,8 +11,11 @@ interface LogoProps {
 }
 
 const sizeClasses = {
-  md: 'h-18 w-18',
-  lg: 'h-32 w-32',
+  sm: 'h-8 w-8',
+  md: 'h-12 w-12',
+  lg: 'h-16 w-16',
+  xl: 'h-24 w-24',
+  xxl: 'h-48 w-48',
   custom: '',
 };
 
@@ -52,7 +55,7 @@ export function LogoIcon({
   variant = 'default' 
 }: { 
   className?: string; 
-  size?: 'md' | 'lg';
+  size?: 'sm' | 'md' | 'lg' | 'xl' | 'xxl';
   variant?: 'default' | 'white' | 'dark';
 }) {
   const logoSize = sizeClasses[size];

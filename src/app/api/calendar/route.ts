@@ -23,7 +23,7 @@ export async function GET(request: NextRequest) {
     let query = supabaseAdmin
       .from('v_calendar_events')
       .select('*')
-      .eq('org_id', member.org_id)
+      .eq('org_id', member.orgId)
       .gte('starts_at', from)
       .lte('ends_at', to);
 
@@ -80,7 +80,7 @@ export async function POST(request: NextRequest) {
       .from('cal_calendars')
       .select('id')
       .eq('id', calendar_id)
-      .eq('org_id', member.org_id)
+      .eq('org_id', member.orgId)
       .single();
 
     if (!calendar) {
@@ -91,7 +91,7 @@ export async function POST(request: NextRequest) {
     const { data: event, error: eventError } = await supabaseAdmin
       .from('cal_events')
       .insert({
-        org_id: member.org_id,
+        org_id: member.orgId,
         calendar_id,
         title,
         description,
@@ -100,7 +100,7 @@ export async function POST(request: NextRequest) {
         starts_at,
         ends_at,
         kind: 'general',
-        created_by: member.user_id
+        created_by: member.userId
       })
       .select()
       .single();
@@ -113,7 +113,7 @@ export async function POST(request: NextRequest) {
     // Adicionar participantes se especificados
     if (attendees && attendees.length > 0) {
       const attendeeData = attendees.map((attendee: any) => ({
-        org_id: member.org_id,
+        org_id: member.orgId,
         event_id: event.id,
         user_id: attendee.user_id,
         contact_id: attendee.contact_id,

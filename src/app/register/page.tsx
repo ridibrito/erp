@@ -2,406 +2,529 @@
 
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { useAuth } from '@/contexts/AuthContext-simple';
+import { useAuth } from '@/contexts/AuthContext-enhanced';
+import { SignUpData } from '@/lib/auth-enhanced';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Alert, AlertDescription } from '@/components/ui/alert';
-import { Loader2, Eye, EyeOff, Building2, Search, CheckCircle, XCircle, User, Lock, Building } from 'lucide-react';
-import { validateCNPJ, consultCNPJ, formatCNPJ, type CNPJData } from '@/lib/cnpj-validator';
 import { Logo } from '@/components/ui/Logo';
+import { AuthGuard } from '@/components/auth/AuthGuard';
+import { ChevronRight, ChevronLeft, Building2, User, Lock } from 'lucide-react';
+import Link from 'next/link';
+import React from 'react';
 
 export default function RegisterPage() {
-  // Dados pessoais
-  const [name, setName] = useState('');
-  const [email, setEmail] = useState('');
-  const [password, setPassword] = useState('');
+  const [formData, setFormData] = useState<SignUpData>({
+    email: '',
+    password: '',
+    name: '',
+    phone: '',
+    organizationName: '',
+    cnpj: ''
+  });
   const [confirmPassword, setConfirmPassword] = useState('');
-  const [showPassword, setShowPassword] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [validationErrors, setValidationErrors] = useState<Record<string, string>>({});
+  const [currentStep, setCurrentStep] = useState(1);
+  const [cnpjData, setCnpjData] = useState<any>(null);
   
-  // Dados empresariais
-  const [companyName, setCompanyName] = useState('');
-  const [cnpj, setCnpj] = useState('');
-  const [cnpjData, setCnpjData] = useState<CNPJData | null>(null);
-  const [cnpjValidating, setCnpjValidating] = useState(false);
-  const [cnpjValid, setCnpjValid] = useState<boolean | null>(null);
-  
-  // Estados gerais
-  const [error, setError] = useState('');
-  const [loading, setLoading] = useState(false);
-  
-  const { signUp } = useAuth();
+  const { signUp, error, clearError } = useAuth();
   const router = useRouter();
 
-  // Função para validar CNPJ usando API Brasil
-  const handleCNPJValidation = async () => {
-    if (!cnpj.trim()) return;
-    
-    setCnpjValidating(true);
-    setCnpjValid(null);
-    setCnpjData(null);
-    setError('');
-    
-    try {
-      // Primeiro valida o formato
-      const validation = validateCNPJ(cnpj);
-      if (!validation.isValid) {
-        setCnpjValid(false);
-        setError(validation.errors.join(', '));
+  const steps = [
+    { id: 1, title: 'Dados da Empresa', icon: Building2 },
+    { id: 2, title: 'Seus Dados', icon: User },
+    { id: 3, title: 'Segurança', icon: Lock }
+  ];
+
+  const validateStep = (step: number): boolean => {
+    const errors: Record<string, string> = {};
+
+    if (step === 1) {
+      // Validar dados da empresa
+      if (!formData.organizationName) {
+        errors.organizationName = 'Nome da empresa é obrigatório';
+      } else if (formData.organizationName.length < 2) {
+        errors.organizationName = 'Nome da empresa deve ter pelo menos 2 caracteres';
+      }
+
+      if (!formData.cnpj) {
+        errors.cnpj = 'CNPJ é obrigatório';
+      } else if (formData.cnpj.replace(/\D/g, '').length !== 14) {
+        errors.cnpj = 'CNPJ deve ter 14 dígitos';
+      }
+    } else if (step === 2) {
+      // Validar dados pessoais
+      if (!formData.name) {
+        errors.name = 'Nome é obrigatório';
+      } else if (formData.name.length < 2) {
+        errors.name = 'Nome deve ter pelo menos 2 caracteres';
+      }
+
+      if (!formData.email) {
+        errors.email = 'Email é obrigatório';
+      } else if (!/\S+@\S+\.\S+/.test(formData.email)) {
+        errors.email = 'Email inválido';
+      }
+
+      if (formData.phone && !/^\(\d{2}\)\s\d{4,5}-\d{4}$/.test(formData.phone)) {
+        errors.phone = 'Telefone deve estar no formato (11) 99999-9999';
+      }
+    } else if (step === 3) {
+      // Validar segurança
+      if (!formData.password) {
+        errors.password = 'Senha é obrigatória';
+      } else if (formData.password.length < 6) {
+        errors.password = 'Senha deve ter pelo menos 6 caracteres';
+      }
+
+      if (!confirmPassword) {
+        errors.confirmPassword = 'Confirmação de senha é obrigatória';
+      } else if (formData.password !== confirmPassword) {
+        errors.confirmPassword = 'Senhas não coincidem';
+      }
+    }
+
+    setValidationErrors(errors);
+    return Object.keys(errors).length === 0;
+  };
+
+  const handleNextStep = async () => {
+    // Se for a etapa 1, validar CNPJ com API
+    if (currentStep === 1) {
+      if (!formData.cnpj) {
+        setValidationErrors({ cnpj: 'CNPJ é obrigatório' });
         return;
       }
-      
-      // Consulta na API Brasil
-      const data = await consultCNPJ(cnpj);
-      if (data) {
-        setCnpjData(data);
-        setCnpjValid(true);
-        setCompanyName(data.razaoSocial);
-        setError('');
-      } else {
-        setCnpjValid(false);
-        setError('CNPJ não encontrado');
+
+      try {
+        const { validateCNPJWithAPI } = await import('@/lib/cnpj-validator');
+        const cnpjValidation = await validateCNPJWithAPI(formData.cnpj!);
+        
+        if (!cnpjValidation.isValid) {
+          setValidationErrors({ cnpj: cnpjValidation.error || 'CNPJ inválido' });
+          return;
+        }
+        
+        setCnpjData(cnpjValidation.data);
+        
+        // Preencher automaticamente a razão social
+        if (cnpjValidation.data?.razao_social) {
+          setFormData(prev => ({
+            ...prev,
+            organizationName: cnpjValidation.data!.razao_social
+          }));
+        }
+        
+        // Limpar erros e mostrar sucesso
+        setValidationErrors({});
+        
+        // Aguardar um pouco para mostrar o sucesso antes de avançar
+        setTimeout(() => {
+          if (currentStep < 3) {
+            setCurrentStep(currentStep + 1);
+          }
+        }, 1500);
+        
+        return;
+      } catch (error) {
+        setValidationErrors({ cnpj: 'Erro ao validar CNPJ' });
+        return;
       }
-    } catch (err) {
-      setCnpjValid(false);
-      setError(err instanceof Error ? err.message : 'Erro ao validar CNPJ');
-    } finally {
-      setCnpjValidating(false);
+    }
+
+    // Para outras etapas, validar normalmente
+    if (!validateStep(currentStep)) {
+      return;
+    }
+
+    if (currentStep < 3) {
+      setCurrentStep(currentStep + 1);
     }
   };
 
+  const handlePrevStep = () => {
+    if (currentStep > 1) {
+      setCurrentStep(currentStep - 1);
+    }
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    setError('');
+    setIsSubmitting(true);
+    clearError();
 
-    // Validações básicas
-    if (password !== confirmPassword) {
-      setError('As senhas não coincidem');
+    if (!validateStep(3)) {
+      setIsSubmitting(false);
       return;
     }
-
-    if (password.length < 6) {
-      setError('A senha deve ter pelo menos 6 caracteres');
-      return;
-    }
-
-    if (!cnpjValid || !cnpjData) {
-      setError('CNPJ deve ser validado antes de continuar');
-      return;
-    }
-
-    if (!companyName.trim()) {
-      setError('Nome da empresa é obrigatório');
-      return;
-    }
-
-    setLoading(true);
 
     try {
-      const { error } = await signUp(email, password, name);
+      const { error } = await signUp(formData);
       
       if (error) {
-        setError(error.message || 'Erro ao criar conta');
+        setValidationErrors({ general: error.message });
+        setIsSubmitting(false);
         return;
       }
-
-      // Redirecionar para login
-      router.push('/login?message=Conta criada com sucesso! Verifique seu email.');
-    } catch (err) {
-      setError('Erro inesperado ao criar conta');
+      
+      // Usuário criado com sucesso, redirecionar para login
+      console.log('Usuário criado com sucesso, redirecionando para login...');
+      router.push(`/login?message=Conta criada com sucesso! Um email de confirmação foi enviado para ${formData.email}. Verifique sua caixa de entrada e confirme sua conta antes de fazer login.`);
+    } catch (error) {
+      console.error('Erro no registro:', error);
+      setValidationErrors({ general: 'Erro interno do servidor' });
     } finally {
-      setLoading(false);
+      setIsSubmitting(false);
+    }
+  };
+
+  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const { name, value } = e.target;
+    
+    if (name === 'confirmPassword') {
+      setConfirmPassword(value);
+    } else {
+      setFormData(prev => ({
+        ...prev,
+        [name]: value
+      }));
+    }
+  };
+
+  const formatPhone = (value: string) => {
+    const numbers = value.replace(/\D/g, '');
+    
+    if (numbers.length <= 2) {
+      return numbers;
+    } else if (numbers.length <= 7) {
+      return `(${numbers.slice(0, 2)}) ${numbers.slice(2)}`;
+    } else {
+      return `(${numbers.slice(0, 2)}) ${numbers.slice(2, 7)}-${numbers.slice(7, 11)}`;
+    }
+  };
+
+  const handlePhoneChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const formatted = formatPhone(e.target.value);
+    setFormData(prev => ({
+      ...prev,
+      phone: formatted
+    }));
+  };
+
+  const formatCNPJ = (value: string) => {
+    // Remove tudo que não é dígito
+    const numbers = value.replace(/\D/g, '');
+    
+    // Aplica a máscara
+    if (numbers.length <= 14) {
+      return numbers
+        .replace(/(\d{2})(\d)/, '$1.$2')
+        .replace(/(\d{3})(\d)/, '$1.$2')
+        .replace(/(\d{3})(\d)/, '$1/$2')
+        .replace(/(\d{4})(\d)/, '$1-$2');
+    }
+    
+    return value;
+  };
+
+  const handleCNPJChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const formatted = formatCNPJ(e.target.value);
+    setFormData(prev => ({
+      ...prev,
+      cnpj: formatted
+    }));
+  };
+
+  const renderStepContent = () => {
+    switch (currentStep) {
+      case 1:
+        return (
+          <div className="space-y-6">
+            <div>
+              <Label htmlFor="cnpj">CNPJ da Empresa</Label>
+              <div className="flex space-x-2">
+                <Input
+                  id="cnpj"
+                  name="cnpj"
+                  type="text"
+                  value={formData.cnpj}
+                  onChange={handleCNPJChange}
+                  placeholder="00.000.000/0000-00"
+                  className="mt-1 flex-1"
+                  required
+                />
+                <Button
+                  type="button"
+                  onClick={handleNextStep}
+                  disabled={!formData.cnpj || cnpjData}
+                  className="mt-1"
+                >
+                  {cnpjData ? '✓ Validado' : 'Validar'}
+                </Button>
+              </div>
+              <p className="text-xs text-muted-foreground mt-1">
+                CNPJ será validado na Receita Federal
+              </p>
+              {validationErrors.cnpj && (
+                <p className="mt-1 text-sm text-red-600">{validationErrors.cnpj}</p>
+              )}
+            </div>
+
+            {cnpjData && (
+              <div className="p-4 bg-green-50 border border-green-200 rounded-lg">
+                <div className="flex items-center space-x-2">
+                  <div className="w-5 h-5 bg-green-500 rounded-full flex items-center justify-center">
+                    <svg className="w-3 h-3 text-white" fill="currentColor" viewBox="0 0 20 20">
+                      <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
+                    </svg>
+                  </div>
+                  <h4 className="font-medium text-green-800">CNPJ Validado com Sucesso!</h4>
+                </div>
+                <p className="text-sm text-green-700 mt-2">{cnpjData.razao_social}</p>
+                <p className="text-xs text-green-600">{cnpjData.municipio} - {cnpjData.uf}</p>
+                <p className="text-xs text-green-600 mt-1">Avançando para a próxima etapa...</p>
+              </div>
+            )}
+
+            {cnpjData && (
+              <div>
+                <Label htmlFor="organizationName">Nome da Empresa</Label>
+                <Input
+                  id="organizationName"
+                  name="organizationName"
+                  type="text"
+                  value={formData.organizationName}
+                  onChange={handleInputChange}
+                  placeholder="Nome da sua empresa"
+                  className="mt-1"
+                  required
+                  disabled={true}
+                />
+                <p className="mt-1 text-xs text-green-600">
+                  ✓ Preenchido automaticamente com base no CNPJ
+                </p>
+                <p className="text-xs text-muted-foreground mt-1">
+                  Você será o administrador desta empresa
+                </p>
+                {validationErrors.organizationName && (
+                  <p className="mt-1 text-sm text-red-600">{validationErrors.organizationName}</p>
+                )}
+              </div>
+            )}
+          </div>
+        );
+
+      case 2:
+        return (
+          <div className="space-y-6">
+            <div>
+              <Label htmlFor="name">Nome Completo</Label>
+              <Input
+                id="name"
+                name="name"
+                type="text"
+                value={formData.name}
+                onChange={handleInputChange}
+                placeholder="Seu nome completo"
+                className="mt-1"
+                required
+              />
+              {validationErrors.name && (
+                <p className="mt-1 text-sm text-red-600">{validationErrors.name}</p>
+              )}
+            </div>
+
+            <div>
+              <Label htmlFor="email">Email</Label>
+              <Input
+                id="email"
+                name="email"
+                type="email"
+                value={formData.email}
+                onChange={handleInputChange}
+                placeholder="seu@email.com"
+                className="mt-1"
+                required
+              />
+              {validationErrors.email && (
+                <p className="mt-1 text-sm text-red-600">{validationErrors.email}</p>
+              )}
+            </div>
+
+            <div>
+              <Label htmlFor="phone">Telefone (Opcional)</Label>
+              <Input
+                id="phone"
+                name="phone"
+                type="tel"
+                value={formData.phone}
+                onChange={handlePhoneChange}
+                placeholder="(11) 99999-9999"
+                className="mt-1"
+              />
+              {validationErrors.phone && (
+                <p className="mt-1 text-sm text-red-600">{validationErrors.phone}</p>
+              )}
+            </div>
+          </div>
+        );
+
+      case 3:
+        return (
+          <div className="space-y-6">
+            <div>
+              <Label htmlFor="password">Senha</Label>
+              <Input
+                id="password"
+                name="password"
+                type="password"
+                value={formData.password}
+                onChange={handleInputChange}
+                placeholder="Mínimo 6 caracteres"
+                className="mt-1"
+                required
+              />
+              {validationErrors.password && (
+                <p className="mt-1 text-sm text-red-600">{validationErrors.password}</p>
+              )}
+            </div>
+
+            <div>
+              <Label htmlFor="confirmPassword">Confirmar Senha</Label>
+              <Input
+                id="confirmPassword"
+                name="confirmPassword"
+                type="password"
+                value={confirmPassword}
+                onChange={handleInputChange}
+                placeholder="Digite a senha novamente"
+                className="mt-1"
+                required
+              />
+              {validationErrors.confirmPassword && (
+                <p className="mt-1 text-sm text-red-600">{validationErrors.confirmPassword}</p>
+              )}
+            </div>
+          </div>
+        );
+
+      default:
+        return null;
     }
   };
 
   return (
-    <div className="min-h-screen flex">
-      {/* Lado Esquerdo - Apresentação da Empresa */}
-      <div className="hidden lg:flex lg:w-1/2 bg-gradient-to-br from-accent to-blue-800 relative overflow-hidden">
-        <div className="absolute inset-0 bg-black/20"></div>
-        <div className="relative z-10 flex flex-col justify-center items-center text-white p-12">
-          <h1 className="text-4xl font-bold mb-4 text-center">
-            Comece sua jornada
-          </h1>
-          <p className="text-xl text-blue-100 text-center mb-8 max-w-md">
-            Transforme a gestão da sua empresa com nossa plataforma completa e intuitiva.
-          </p>
-          <div className="grid grid-cols-1 gap-6 max-w-md">
-            <div className="flex items-center space-x-3">
-              <div className="w-8 h-8 bg-white/20 rounded-full flex items-center justify-center">
-                <span className="text-lg">🏢</span>
-              </div>
-              <span className="text-blue-100">Gestão empresarial completa</span>
+    <AuthGuard requireAuth={false}>
+      <div className="min-h-screen flex">
+        {/* Lado esquerdo - Formulário */}
+        <div className="flex-1 flex items-center justify-center bg-white px-4 sm:px-6 lg:px-8">
+          <div className="max-w-md w-full space-y-8">
+            <div className="text-center">
+              <Logo size="xxl" className="mx-auto" />
+              <h2 className="mt-6 text-3xl font-bold tracking-tight text-gray-900">
+                Crie sua conta
+              </h2>
+              <p className="mt-2 text-sm text-gray-600">
+                Já tem uma conta?{' '}
+                <Link href="/login" className="font-medium text-blue-600 hover:text-blue-500">
+                  Faça login
+                </Link>
+              </p>
             </div>
-            <div className="flex items-center space-x-3">
-              <div className="w-8 h-8 bg-white/20 rounded-full flex items-center justify-center">
-                <span className="text-lg">📈</span>
-              </div>
-              <span className="text-blue-100">Crescimento sustentável</span>
-            </div>
-            <div className="flex items-center space-x-3">
-              <div className="w-8 h-8 bg-white/20 rounded-full flex items-center justify-center">
-                <span className="text-lg">🤝</span>
-              </div>
-              <span className="text-blue-100">Suporte especializado</span>
-            </div>
-          </div>
-        </div>
-        {/* Decoração de fundo */}
-        <div className="absolute top-20 right-20 w-32 h-32 bg-white/10 rounded-full"></div>
-        <div className="absolute bottom-20 left-20 w-24 h-24 bg-white/10 rounded-full"></div>
-        <div className="absolute top-1/2 left-1/4 w-16 h-16 bg-white/10 rounded-full"></div>
-      </div>
 
-      {/* Lado Direito - Formulário de Registro */}
-      <div className="w-full lg:w-1/2 flex items-center justify-center p-8 bg-gray-50 overflow-y-auto">
-        <div className="w-full max-w-2xl">
-          <div className="text-center mb-8">
-            <div className="flex justify-center mb-6">
-              <Logo size="custom" width={200} height={200} />
-            </div>
-            <h2 className="text-3xl font-bold text-gray-900 mb-2">
-              Criar conta empresarial
-            </h2>
-            <p className="text-gray-600">
-              Preencha os dados abaixo para começar
-            </p>
-          </div>
-
-          <form onSubmit={handleSubmit} className="space-y-6">
-            {error && (
-              <Alert variant="destructive">
-                <AlertDescription>{error}</AlertDescription>
-              </Alert>
-            )}
-            
-            <div className=" p-6 rounded-xl  bspace-y-6">
-              {/* Dados Pessoais */}
-              <div className="space-y-4">
-                <h3 className="text-lg font-semibold text-gray-900 flex items-center">
-                  <User className="w-5 h-5 text-accent mr-2" />
-                  Dados Pessoais
-                </h3>
-                
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <div className="space-y-2">
-                    <Label htmlFor="name" className="text-sm font-medium text-gray-700">
-                      Nome completo *
-                    </Label>
-                    <Input
-                      id="name"
-                      type="text"
-                      placeholder="Seu nome completo"
-                      value={name}
-                      onChange={(e) => setName(e.target.value)}
-                      required
-                      disabled={loading}
-                      className="h-12 border-gray-300 focus:border-accent focus:ring-accent"
-                    />
+            <Card>
+              <CardHeader>
+                <div className="flex items-center justify-between">
+                  <div>
+                    <CardTitle className="flex items-center gap-2">
+                      {React.createElement(steps[currentStep - 1].icon, { className: "w-5 h-5" })}
+                      {steps[currentStep - 1].title}
+                    </CardTitle>
+                    <CardDescription>
+                      Etapa {currentStep} de {steps.length}
+                    </CardDescription>
                   </div>
-                  
-                  <div className="space-y-2">
-                    <Label htmlFor="email" className="text-sm font-medium text-gray-700">
-                      Email *
-                    </Label>
-                    <Input
-                      id="email"
-                      type="email"
-                      placeholder="seu@email.com"
-                      value={email}
-                      onChange={(e) => setEmail(e.target.value)}
-                      required
-                      disabled={loading}
-                      className="h-12 border-gray-300 focus:border-accent focus:ring-accent"
-                    />
+                  <div className="flex space-x-1">
+                    {steps.map((step) => (
+                      <div
+                        key={step.id}
+                        className={`w-2 h-2 rounded-full ${
+                          step.id <= currentStep ? 'bg-blue-600' : 'bg-gray-300'
+                        }`}
+                      />
+                    ))}
                   </div>
                 </div>
-              </div>
+              </CardHeader>
+              <CardContent>
+                {error && (
+                  <Alert variant="destructive" className="mb-4">
+                    <AlertDescription>{error.message}</AlertDescription>
+                  </Alert>
+                )}
 
-              {/* Dados Empresariais */}
-              <div className="space-y-4">
-                <h3 className="text-lg font-semibold text-gray-900 flex items-center">
-                  <Building className="w-5 h-5 text-accent mr-2" />
-                  Dados da Empresa
-                </h3>
-                
-                <div className="space-y-4">
-                  <div className="space-y-2">
-                    <Label htmlFor="cnpj" className="text-sm font-medium text-gray-700">
-                      CNPJ *
-                    </Label>
-                    <div className="flex gap-2">
-                      <Input
-                        id="cnpj"
-                        type="text"
-                        placeholder="00.000.000/0000-00"
-                        value={cnpj}
-                        onChange={(e) => {
-                          const value = e.target.value.replace(/\D/g, '');
-                          const formatted = value.replace(
-                            /^(\d{2})(\d{3})(\d{3})(\d{4})(\d{2})$/,
-                            '$1.$2.$3/$4-$5'
-                          );
-                          setCnpj(formatted);
-                          setCnpjValid(null);
-                          setCnpjData(null);
-                        }}
-                        required
-                        disabled={loading}
-                        className="flex-1 h-12 border-gray-300 focus:border-accent focus:ring-accent"
-                      />
+                {validationErrors.general && (
+                  <Alert variant="destructive" className="mb-4">
+                    <AlertDescription>{validationErrors.general}</AlertDescription>
+                  </Alert>
+                )}
+
+                <form onSubmit={currentStep === 3 ? handleSubmit : (e) => e.preventDefault()} className="space-y-6">
+                  {renderStepContent()}
+
+                  <div className="flex justify-between pt-4">
+                    {currentStep > 1 ? (
                       <Button
                         type="button"
                         variant="outline"
-                        onClick={handleCNPJValidation}
-                        disabled={loading || cnpjValidating || !cnpj.trim()}
-                        className="px-4 h-12 border-gray-300 hover:border-accent hover:text-accent"
+                        onClick={handlePrevStep}
+                        className="flex items-center gap-2"
                       >
-                        {cnpjValidating ? (
-                          <Loader2 className="h-4 w-4 animate-spin" />
-                        ) : (
-                          <Search className="h-4 w-4" />
-                        )}
+                        <ChevronLeft className="w-4 h-4" />
+                        Voltar
                       </Button>
-                    </div>
-                    
-                    {/* Status da validação do CNPJ */}
-                    {cnpjValid === true && cnpjData && (
-                      <div className="flex items-center gap-2 text-green-600 text-sm">
-                        <CheckCircle className="h-4 w-4" />
-                        <span>CNPJ válido - {cnpjData.razaoSocial}</span>
-                      </div>
+                    ) : (
+                      <div />
                     )}
-                    
-                    {cnpjValid === false && (
-                      <div className="flex items-center gap-2 text-red-600 text-sm">
-                        <XCircle className="h-4 w-4" />
-                        <span>CNPJ inválido ou não encontrado</span>
-                      </div>
-                    )}
-                  </div>
-                  
-                  <div className="space-y-2">
-                    <Label htmlFor="companyName" className="text-sm font-medium text-gray-700">
-                      Nome da Empresa *
-                    </Label>
-                    <Input
-                      id="companyName"
-                      type="text"
-                      placeholder="Razão social da empresa"
-                      value={companyName}
-                      onChange={(e) => setCompanyName(e.target.value)}
-                      required
-                      disabled={loading || cnpjValid === true}
-                      className="h-12 border-gray-300 focus:border-accent focus:ring-accent"
-                    />
-                    {cnpjValid === true && (
-                      <p className="text-xs text-gray-500">
-                        Nome preenchido automaticamente pela API Brasil
-                      </p>
-                    )}
-                  </div>
-                </div>
-              </div>
 
-              {/* Dados de Acesso */}
-              <div className="space-y-4">
-                <h3 className="text-lg font-semibold text-gray-900 flex items-center">
-                  <Lock className="w-5 h-5 text-accent mr-2" />
-                  Dados de Acesso
-                </h3>
-                
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <div className="space-y-2">
-                    <Label htmlFor="password" className="text-sm font-medium text-gray-700">
-                      Senha *
-                    </Label>
-                    <div className="relative">
-                      <Input
-                        id="password"
-                        type={showPassword ? 'text' : 'password'}
-                        placeholder="Mínimo 6 caracteres"
-                        value={password}
-                        onChange={(e) => setPassword(e.target.value)}
-                        required
-                        disabled={loading}
-                        className="h-12 border-gray-300 focus:border-accent focus:ring-accent pr-12"
-                      />
+                    {currentStep < 3 ? (
                       <Button
                         type="button"
-                        variant="ghost"
-                        size="sm"
-                        className="absolute right-0 top-0 h-12 px-3 py-2 hover:bg-transparent"
-                        onClick={() => setShowPassword(!showPassword)}
-                        disabled={loading}
+                        onClick={handleNextStep}
+                        className="flex items-center gap-2 bg-blue-600 hover:bg-blue-700"
                       >
-                        {showPassword ? (
-                          <EyeOff className="h-5 w-5 text-gray-400" />
-                        ) : (
-                          <Eye className="h-5 w-5 text-gray-400" />
-                        )}
+                        Próximo
+                        <ChevronRight className="w-4 h-4" />
                       </Button>
-                    </div>
+                    ) : (
+                      <Button
+                        type="submit"
+                        disabled={isSubmitting}
+                        className="bg-blue-600 hover:bg-blue-700"
+                      >
+                        {isSubmitting ? 'Criando conta...' : 'Criar conta'}
+                      </Button>
+                    )}
                   </div>
-                  
-                  <div className="space-y-2">
-                    <Label htmlFor="confirmPassword" className="text-sm font-medium text-gray-700">
-                      Confirmar senha *
-                    </Label>
-                    <Input
-                      id="confirmPassword"
-                      type="password"
-                      placeholder="Digite a senha novamente"
-                      value={confirmPassword}
-                      onChange={(e) => setConfirmPassword(e.target.value)}
-                      required
-                      disabled={loading}
-                      className="h-12 border-gray-300 focus:border-accent focus:ring-accent"
-                    />
-                  </div>
-                </div>
-              </div>
-            </div>
-            
-            <Button
-              type="submit"
-              className="w-full h-12 text-white font-medium hover:opacity-90 transition-opacity"
-              style={{ backgroundColor: '#101828' }}
-              disabled={loading || !cnpjValid}
-            >
-              {loading ? (
-                <>
-                  <Loader2 className="mr-2 h-5 w-5 animate-spin" />
-                  Criando conta...
-                </>
-              ) : (
-                'Criar conta empresarial'
-              )}
-            </Button>
-            
-            {!cnpjValid && (
-              <p className="text-sm text-amber-600 text-center">
-                ⚠️ Valide o CNPJ antes de criar a conta
-              </p>
-            )}
-          </form>
-          
-          <div className="mt-8 text-center">
-            <p className="text-gray-600">
-              Já tem uma conta?{' '}
-              <a
-                href="/login"
-                className="font-medium transition-colors hover:opacity-80"
-                style={{ color: '#101828' }}
-              >
-                Faça login
-              </a>
+                </form>
+              </CardContent>
+            </Card>
+          </div>
+        </div>
+
+        {/* Lado direito - Imagem/Background */}
+        <div className="hidden lg:flex lg:flex-1 bg-gradient-to-br from-blue-600 to-blue-800 items-center justify-center">
+          <div className="text-center text-white">
+            <h3 className="text-2xl font-bold mb-4">Bem-vindo ao Cortus ERP</h3>
+            <p className="text-lg opacity-90">
+              Gerencie sua empresa de forma inteligente e eficiente
             </p>
           </div>
         </div>
       </div>
-    </div>
+    </AuthGuard>
   );
 }
