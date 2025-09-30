@@ -2,11 +2,11 @@
 
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
+import Link from 'next/link';
 import { ProtectedLayout } from '@/components/layout/ProtectedLayout';
 import { useAuth } from '@/contexts/AuthContext-enhanced';
 import { useToastHelpers } from '@/components/ui/toast';
 import { PipelineService } from '@/services/pipelineService';
-import { PipelineManager } from '@/components/crm/PipelineManager';
 import { NegociosListView } from '@/components/crm/NegociosListView';
 import { NegociosKanbanView } from '@/components/crm/NegociosKanbanView';
 import { NegocioDrawer } from '@/components/crm/NegocioDrawer';
@@ -27,7 +27,6 @@ export default function NegociosPage() {
   const [negocios, setNegocios] = useState<Negocio[]>([]);
   const [viewMode, setViewMode] = useState<ViewMode>('kanban');
   const [loading, setLoading] = useState(true);
-  const [showPipelineManager, setShowPipelineManager] = useState(false);
   const [showNegocioDrawer, setShowNegocioDrawer] = useState(false);
   const [creatingNegocio, setCreatingNegocio] = useState(false);
 
@@ -79,51 +78,6 @@ export default function NegociosPage() {
     }
   };
 
-  // Pipeline management
-  const handleCreatePipeline = async (pipelineData: Omit<Pipeline, 'id' | 'createdAt' | 'updatedAt'>) => {
-    if (!user?.orgId) return;
-    
-    try {
-      const newPipeline = await PipelineService.createPipeline(user.orgId, pipelineData);
-      setPipelines(prev => [...prev, newPipeline]);
-      setSelectedPipeline(newPipeline);
-      success('Pipeline criado', 'Pipeline criado com sucesso!');
-    } catch (err) {
-      console.error('Erro ao criar pipeline:', err);
-      error('Erro ao criar pipeline', 'Não foi possível criar o pipeline. Tente novamente.');
-    }
-  };
-
-  const handleUpdatePipeline = async (id: string, updates: Partial<Pipeline>) => {
-    try {
-      const updatedPipeline = await PipelineService.updatePipeline(id, updates);
-      setPipelines(prev => prev.map(p => p.id === id ? updatedPipeline : p));
-      if (selectedPipeline?.id === id) {
-        setSelectedPipeline(updatedPipeline);
-      }
-      success('Pipeline atualizado', 'Pipeline atualizado com sucesso!');
-    } catch (err) {
-      console.error('Erro ao atualizar pipeline:', err);
-      error('Erro ao atualizar pipeline', 'Não foi possível atualizar o pipeline. Tente novamente.');
-    }
-  };
-
-  const handleDeletePipeline = async (id: string) => {
-    try {
-      await PipelineService.deletePipeline(id);
-      setPipelines(prev => prev.filter(p => p.id !== id));
-      
-      if (selectedPipeline?.id === id) {
-        const remainingPipelines = pipelines.filter(p => p.id !== id);
-        setSelectedPipeline(remainingPipelines.length > 0 ? remainingPipelines[0] : undefined);
-      }
-      
-      success('Pipeline deletado', 'Pipeline deletado com sucesso!');
-    } catch (err) {
-      console.error('Erro ao deletar pipeline:', err);
-      error('Erro ao deletar pipeline', 'Não foi possível deletar o pipeline. Tente novamente.');
-    }
-  };
 
   // Negócios management
   const handleCreateNegocio = async (negocioData: NegocioFormData) => {
@@ -246,14 +200,15 @@ export default function NegociosPage() {
             </div>
             
             <div className="flex items-center gap-2">
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => setShowPipelineManager(!showPipelineManager)}
-              >
-                <Settings className="w-4 h-4 mr-2" />
-                Gerenciar Pipelines
-              </Button>
+              <Link href="/settings/pipelines">
+                <Button
+                  variant="outline"
+                  size="sm"
+                >
+                  <Settings className="w-4 h-4 mr-2" />
+                  Gerenciar Pipelines
+                </Button>
+              </Link>
               
               <Button
                 variant="outline"
@@ -288,23 +243,8 @@ export default function NegociosPage() {
         <div className="flex-1 overflow-hidden">
           <div className="h-full">
 
-            {/* Pipeline Manager */}
-            {showPipelineManager && (
-              <div className="bg-card border rounded-lg p-6 m-6">
-                <PipelineManager
-                  pipelines={pipelines}
-                  onSelectPipeline={setSelectedPipeline}
-                  onCreatePipeline={handleCreatePipeline}
-                  onUpdatePipeline={handleUpdatePipeline}
-                  onDeletePipeline={handleDeletePipeline}
-                  selectedPipeline={selectedPipeline}
-                />
-              </div>
-            )}
-
             {/* Pipeline Selector */}
-            {!showPipelineManager && (
-              <div className="flex items-center gap-4 p-6 border-b">
+            <div className="flex items-center gap-4 p-6 border-b">
                 <div className="flex items-center gap-2">
                   <span className="text-sm font-medium">Pipeline:</span>
                   <select
@@ -330,10 +270,9 @@ export default function NegociosPage() {
                   </div>
                 )}
               </div>
-            )}
 
             {/* Content */}
-            {selectedPipeline && !showPipelineManager && (
+            {selectedPipeline && (
               <>
                 {viewMode === 'list' ? (
                   <div className="h-full p-6">
@@ -363,21 +302,20 @@ export default function NegociosPage() {
             )}
 
             {/* Empty State */}
-            {!selectedPipeline && !showPipelineManager && (
+            {!selectedPipeline && (
               <div className="text-center py-12">
                 <div className="text-muted-foreground">
                   <Settings className="w-12 h-12 mx-auto mb-4 opacity-50" />
-                  <h3 className="text-lg font-medium mb-2">Nenhum pipeline selecionado</h3>
+                  <h3 className="text-lg font-medium mb-2">Nenhum pipeline encontrado</h3>
                   <p className="text-sm mb-4">
-                    Selecione um pipeline existente ou crie um novo para começar.
+                    Crie um pipeline nas configurações para começar a gerenciar seus negócios.
                   </p>
-                  <Button
-                    onClick={() => setShowPipelineManager(true)}
-                    variant="outline"
-                  >
-                    <Settings className="w-4 h-4 mr-2" />
-                    Gerenciar Pipelines
-                  </Button>
+                  <Link href="/settings/pipelines">
+                    <Button variant="outline">
+                      <Settings className="w-4 h-4 mr-2" />
+                      Gerenciar Pipelines
+                    </Button>
+                  </Link>
                 </div>
               </div>
             )}

@@ -1,6 +1,5 @@
 "use client";
 import { useState } from 'react';
-import { useRouter } from 'next/navigation';
 import { SettingsSidebar } from '@/components/settings/SettingsSidebar';
 import { 
   CreditCard, 
@@ -190,17 +189,9 @@ import {
 export default function Page(){
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
   const [activeSection, setActiveSection] = useState('integrations');
-  const router = useRouter();
   
   const toggleSidebar = () => {
     setIsSidebarCollapsed(!isSidebarCollapsed);
-  };
-
-  const handleSectionChange = (sectionId: string) => {
-    setActiveSection(sectionId);
-    if (sectionId !== 'integrations') {
-      router.push(`/settings?section=${sectionId}`);
-    }
   };
   
   const integrations = [
@@ -520,9 +511,8 @@ export default function Page(){
         isCollapsed={isSidebarCollapsed} 
         onToggle={toggleSidebar} 
         activeSection={activeSection}
-        onSectionChange={handleSectionChange}
       />
-      <div className="flex-1 p-6">
+      <div className="flex-1 p-6 overflow-auto">
         <div className="max-w-6xl">
           <div className="mb-8">
             <h1 className="text-2xl font-bold tracking-tight">Integrações</h1>

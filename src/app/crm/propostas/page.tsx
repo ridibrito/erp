@@ -205,6 +205,7 @@ export default function PropostasPage() {
           </table>
         </div>
       </div>
+        </div>
       </div>
     </ProtectedLayout>
   );

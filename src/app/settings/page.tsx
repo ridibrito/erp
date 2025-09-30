@@ -3,7 +3,6 @@ import { useState, useEffect } from 'react';
 import { useSearchParams } from 'next/navigation';
 import { SettingsSidebar } from '@/components/settings/SettingsSidebar';
 import { SectionTabs } from '@/components/settings/SectionTabs';
-import { ProtectedLayout } from '@/components/layout/ProtectedLayout';
 import { useAuth } from '@/contexts/AuthContext-enhanced';
 import { supabase, supabaseAdmin } from '@/lib/supabase';
 import { useToastHelpers } from '@/components/ui/toast';
@@ -2488,15 +2487,13 @@ export default function Page(){
   };
 
   return (
-    <ProtectedLayout>
     <div className="flex h-full">
       <SettingsSidebar 
         isCollapsed={isSidebarCollapsed} 
         onToggle={toggleSidebar}
         activeSection={activeSection}
-        onSectionChange={handleSectionChange}
       />
-      <div className="flex-1 flex flex-col">
+      <div className="flex-1 flex flex-col overflow-auto">
         <div className="p-6">
           <div className="mb-8">
             <h1 className="text-2xl font-bold tracking-tight">Configurações do Sistema</h1>
@@ -2512,7 +2509,6 @@ export default function Page(){
           <div className="mt-6">
             {getTabContent(activeSection, activeTab)}
           </div>
-        </div>
         </div>
       </div>
 
@@ -2570,6 +2566,6 @@ export default function Page(){
           </div>
         </div>
       )}
-    </ProtectedLayout>
+    </div>
   );
 }
